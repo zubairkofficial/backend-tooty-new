@@ -4,53 +4,73 @@ import { Subject } from './entity/subject.entity';
 import { Op } from 'sequelize';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { getErrorMessage } from 'src/utils/errors.utils';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { User } from 'src/user/entities/user.entity';
 
 
 export class SubjectService {
   async getSubjectsByTeacher(req: any) {
     try {
-      const assignedSubjects = await JoinTeacherSubjectLevel.findAll({
-        attributes: ['subject_id'],
-        where: {
-          teacher_id: {
-            [Op.eq]: req.user.sub,
-          },
-        },
-      });
 
-      if (!assignedSubjects.length) {
-        throw new HttpException(
-          {
-            errorCode: 2001,
-            message: getErrorMessage(2001),
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      const subjectsByTeacher = await Subject.findAll({
+      const subjects = await User.findOne({
+        include: [{
+          model: TeacherProfile,
+          include: [{
+            model: Subject
+          }]
+        }],
+        attributes: ["id"],
         where: {
-          id: {
-            [Op.in]: assignedSubjects.map(({ subject_id }) => subject_id),
-          },
-        },
-      });
+          id: req.user.sub
+        }
+      })
+      // const assignedSubjects = await JoinTeacherSubjectLevel.findAll({
+      //   attributes: ['subject_id'],
+      //   where: {
+      //     teacher_id: {
+      //       [Op.eq]: req.user.sub,
+      //     },
+      //   },
+      // });
+
+      // if (!assignedSubjects.length) {
+      //   throw new HttpException(
+      //     {
+      //       errorCode: 2001,
+      //       message: getErrorMessage(2001),
+      //     },
+      //     HttpStatus.NOT_FOUND,
+      //   );
+      // }
+
+      // const subjectsByTeacher = await Subject.findAll({
+      //   where: {
+      //     id: {
+      //       [Op.in]: assignedSubjects.map(({ subject_id }) => subject_id),
+      //     },
+      //   },
+      // });
 
       return {
         statusCode: 200,
-        data: subjectsByTeacher,
+        data: subjects,
       };
     } catch (error) {
       throw this.handleError(error, 4001);
     }
   }
 
-  async getSubjectsByLevel(getSubjectByLevelDto: GetSubjectByLevelDto) {
+  async getSubjectsByLevel(getSubjectByLevelDto: GetSubjectByLevelDto, req: any) {
     try {
       const subjectsData = await Subject.findAll({
         where: {
           level_id: {
             [Op.eq]: getSubjectByLevelDto.level_id,
+
+          },
+          school_id: {
+            [Op.eq]: req.user.school_id,
+
           },
         },
       });
@@ -87,15 +107,20 @@ export class SubjectService {
     }
   }
 
-  async getAllSubjects({ page, limit }: { page?: number; limit?: number } = {}) {
+  async getAllSubjects({ page, limit }: { page?: number; limit?: number } = {}, req: any) {
     try {
       let subjects;
       let total;
-  
+
       if (page && limit) {
         // Pagination logic
         const offset = (page - 1) * limit;
         const result = await Subject.findAndCountAll({
+          where: {
+            school_id: {
+              [Op.eq]: req.user.school_id
+            }
+          },
           limit,
           offset,
         });
@@ -106,9 +131,9 @@ export class SubjectService {
         subjects = await Subject.findAll();
         total = subjects.length;
       }
-  
+
       const totalPages = limit ? Math.ceil(total / limit) : 1;
-  
+
       return {
         statusCode: 200,
         data: subjects,
@@ -160,13 +185,14 @@ export class SubjectService {
     }
   }
 
-  async createSubject(createSubjectDto: CreateSubjectDto) {
+  async createSubject(createSubjectDto: CreateSubjectDto, req: any) {
     try {
       await Subject.create({
         title: createSubjectDto.title,
         display_title: createSubjectDto.display_title,
         description: createSubjectDto.description,
         level_id: createSubjectDto.level_id,
+        school_id: req.user.school_id
       });
 
       return {

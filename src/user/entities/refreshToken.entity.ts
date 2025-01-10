@@ -33,6 +33,6 @@ export class RefreshToken extends Model {
   @Column
   user_id: number;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, { onDelete: 'CASCADE' })
   user!: User;
 }

@@ -13,11 +13,11 @@ export class SubjectController {
     constructor(private readonly subjectServices: SubjectService) { }
 
     // For Teacher
+    @Get('get-subjects-by-teacher')
     @ApiOperation({ summary: 'Get subjects assigned to the teacher' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved subjects by teacher.' })
     @Roles(Role.TEACHER)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Get('get-subjects-by-teacher')
     async getSubjectsByTeacher(@Req() req: any) {
         return this.subjectServices.getSubjectsByTeacher(req);
     }
@@ -31,7 +31,7 @@ export class SubjectController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('get-subjects-by-level')
     async getSubjectsByLevel(@Body() getSubjectByLevelDto: GetSubjectByLevelDto, @Req() req: any) {
-        return this.subjectServices.getSubjectsByLevel(getSubjectByLevelDto);
+        return this.subjectServices.getSubjectsByLevel(getSubjectByLevelDto, req);
     }
 
     @ApiOperation({ summary: 'Get a subject by ID' })
@@ -52,11 +52,12 @@ export class SubjectController {
     @Get('get-all-subjects')
     async getAllSubjects(
         @Req() req: any,
-        @Query('page') page?: number , // Default to page 1
-        @Query('limit') limit?: number , // Default to 10 items per page
+        @Query('page') page?: number, // Default to page 1
+        @Query('limit') limit?: number, // Default to 10 items per page
     ) {
-        return this.subjectServices.getAllSubjects({ page, limit });
+        return this.subjectServices.getAllSubjects({ page, limit }, req);
     }
+
     @ApiOperation({ summary: 'Update a subject' })
     @ApiResponse({ status: 200, description: 'Successfully updated the subject.' })
     @ApiBody({ type: UpdateSubjectDto })
@@ -74,6 +75,6 @@ export class SubjectController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('create-subject')
     async createSubject(@Body() createSubjectDto: CreateSubjectDto, @Req() req: any) {
-        return this.subjectServices.createSubject(createSubjectDto);
+        return this.subjectServices.createSubject(createSubjectDto, req);
     }
 }

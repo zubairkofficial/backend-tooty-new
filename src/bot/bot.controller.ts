@@ -4,7 +4,6 @@ import { CreateBotDto, DeleteBotDto, GetBotByLevelSubject, GetBotBySubjectDto, G
 import { CreateBotContextDto, DeleteBotContextDto, GetBotContextDto, UpdateBotContextDto } from './dto/create-Join-bot-data.dto';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
 import { GenerateImageDto } from './dto/generateImage.dto';
-import { GetBotByLevelDto } from './dto/get-bot-by-level.dto';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -20,7 +19,7 @@ export class BotController {
     constructor(private readonly botService: BotService) { }
 
     @Post('generate-image')
-    @Roles(Role.USER, Role.ADMIN)
+    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN, Role.TEACHER)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Generate image for bot' })
     @ApiResponse({ status: 200, description: 'Image generated successfully' })
@@ -29,7 +28,7 @@ export class BotController {
     }
 
     @Post('query-bot')
-    @Roles(Role.USER, Role.ADMIN)
+    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN, Role.TEACHER)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Query bot based on specific parameters' })
     @ApiResponse({ status: 200, description: 'Bot queried successfully' })
@@ -139,7 +138,7 @@ export class BotController {
     @ApiOperation({ summary: 'Get bot by level and subject' })
     @ApiResponse({ status: 200, description: 'Bot by level and subject retrieved' })
     async getBotByLevelSubject(@Body() getBotByLevelSubject: GetBotByLevelSubject, @Req() req: any) {
-        return this.botService.getBotByLevelSubject(getBotByLevelSubject)
+        return this.botService.getBotByLevelSubject(getBotByLevelSubject, req)
     }
 
 
@@ -159,6 +158,21 @@ export class BotController {
     }
 
     @Get('get-all-bots')
+    @Roles(Role.SUPER_ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @ApiOperation({ summary: 'Get all bots' })
+    @ApiResponse({ status: 200, description: 'All bots retrieved' })
+    @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+    @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+    async getAllBots(
+        @Req() req: any,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
+    ) {
+        return this.botService.getAllBots(req, page, limit);
+    }
+
+    @Get('get-all-bot-by-school')
     @Roles(Role.ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Get all bots by admin' })
@@ -170,7 +184,7 @@ export class BotController {
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
     ) {
-        return this.botService.getAllBotsByAdmin(req, page, limit);
+        return this.botService.getAllBotsBySchool(req, page, limit);
     }
 
     @Get('get-bots-by-level')

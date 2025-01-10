@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';  // Swagger decorators
 import { UpdateStudentProfileDto } from './dto/update-profile.dto';
 import { ProfileService } from './profile.service';
@@ -8,8 +8,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto, UpdateTeacherProfileDto } from './dto/teacher-profile.dto';
-import { GetStudentsByLevelDto } from './dto/get-student.dto';
-import { UpdateAdminDto } from './dto/admin.dto';
+import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
 
 @ApiTags('Profile') // Grouping the routes for 'Profile'
 @ApiBearerAuth()  // Add this if you're using JWT authentication
@@ -18,25 +17,76 @@ export class ProfileController {
 
   constructor(private readonly profileServices: ProfileService) { }
 
-  // Admin Management
-  @Get('get-admin-profile')
+
+  @Get('get-all-children')
+  @Roles(Role.PARENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getChildren(@Req() req: any) {
+    return this.profileServices.getChildren(req);
+  }
+
+  //Super admin management
+
+  @Get('get-superadmin-profile')
+  @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getSuperAdminProfile(@Req() req: any) {
+    return this.profileServices.getSuperAdminProfile(req);
+  }
+
+  @Put('update-superadmin-profile')
+  @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Update super Admin Profile' })
+  @ApiResponse({ status: 200, description: ' super Admin profile updated successfully.' })
+  async updateSuperAdminProfile(@Body() updateAdminProfileDto: UpdateSuperAdminDto, @Req() req: any) {
+    return this.profileServices.updateSuperAdmin(updateAdminProfileDto, req);
+  }
+
+  //Parent Management
+  @Get('get-parent-profile/:parent_id')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Admin Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved admin profile.' })
-  async getAdminProfile(@Req() req: any) {
-    return this.profileServices.getAdminProfile(req);
+  async getParentProfile(@Param('parent_id') parent_id: string, @Req() req: any) {
+
+    return this.profileServices.getParentByID(Number(parent_id), req);
+  }
+  
+  // Admin Management
+
+  @Get('get-all-admins')
+  @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Admin All Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved admin profile.' })
+  async getAllAdmins(@Req() req: any) {
+    return this.profileServices.getAllAdmins(req);
+  }
+
+  @Get('get-admin-profile/:admin_id')
+  @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved admin profile.' })
+  async getAdminProfile(@Param() params: { admin_id: string }, @Req() req: any) {
+    const { admin_id } = params
+    return this.profileServices.getAdminProfile(admin_id, req);
   }
 
   @Put('update-admin-profile')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Update Admin Profile' })
-  @ApiResponse({ status: 200, description: 'Admin profile updated successfully.' })
-  async updateAdminProfile(@Body() updateAdminProfileDto: UpdateAdminDto, @Req() req: any) {
+  @ApiOperation({ summary: 'Update super Admin Profile' })
+  @ApiResponse({ status: 200, description: ' super Admin profile updated successfully.' })
+  async updateAdminProfile(@Body() updateAdminProfileDto: UpdateAdminProfileDto, @Req() req: any) {
     return this.profileServices.updateAdmin(updateAdminProfileDto, req);
   }
-
   // Teacher Management
   @Post('create-join-teacher-subject-level')
   @Roles(Role.ADMIN)

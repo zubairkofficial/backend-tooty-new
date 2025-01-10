@@ -71,26 +71,4 @@ export class ApiController {
   async updateAPIkey(@Body() updateApiKeyDto: UpdateApiKeyDto, @Req() req: any) {
     return this.apiServices.updateApiKey(updateApiKeyDto, req);
   }
-
-
-    // @Post('getApiKey')
-    // @UseGuards(JwtAuthGuard)
-    // // @Roles(Role.ADMIN, Role.USER)
-    // async getApiKey(@Body() addAPIkeyDto: AddAPIkeyDto, @Req() req: any) {
-    //     return this.apiServices.addAPIkey(addAPIkeyDto, req)
-    // }
-
-    // @Post('add')
-    // @UseGuards(JwtAuthGuard)
-    // // @Roles(Role.ADMIN, Role.USER)
-    // async addAPIkey(@Body() addAPIkeyDto: AddAPIkeyDto, @Req() req: any) {
-    //     return this.apiServices.addAPIkey(addAPIkeyDto, req)
-    // }
-
-   
-    // @Post('delete')
-    // @UseGuards(JwtAuthGuard)
-    // async deleteApiKey(@Body() deleteApiKeyDto: DeleteApiKeyDto, @Req() req: any) {
-    //     return this.apiServices.deleteApiKey(deleteApiKeyDto, req)
-    // }
 }

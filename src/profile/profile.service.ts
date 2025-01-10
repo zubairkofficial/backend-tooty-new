@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { UpdateStudentProfileDto } from './dto/update-profile.dto';
 import { StudentProfile } from './entities/student-profile.entity';
 import { GetStudentProfileDto } from './dto/get-profile.dto';
@@ -6,16 +5,21 @@ import { Op } from 'sequelize';
 import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto, UpdateTeacherProfileDto } from './dto/teacher-profile.dto';
 import { TeacherProfile } from './entities/teacher-profile.entity';
 import { JoinTeacherSubjectLevel } from './entities/join-teacher-subject-level.entity';
-import { GetStudentsByLevelDto } from './dto/get-student.dto';
-import { UpdateAdminDto } from './dto/admin.dto';
+import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
 import { AdminProfile } from './entities/admin-profile.entity';
+import { SuperAdminProfile } from './entities/super-admin.entity';
+import { User } from 'src/user/entities/user.entity';
+import { Subject } from 'src/subject/entity/subject.entity';
+import { Role } from 'src/utils/roles.enum';
+import { School } from 'src/school/entities/school.entity';
+import { ParentProfile } from './entities/parent-profile.entity';
 
 
 export class ProfileService {
 
-    async getAdminProfile(req: any) {
+    async getSuperAdminProfile(req: any) {
         try {
-            const admin_profile = await AdminProfile.findOne({
+            const super_admin_profile = await SuperAdminProfile.findOne({
                 where: {
                     user_id: {
                         [Op.eq]: req.user.sub
@@ -24,18 +28,18 @@ export class ProfileService {
             })
             return {
                 statusCode: 200,
-                data: admin_profile
+                data: super_admin_profile
 
             }
         } catch (error) {
-            throw new Error("failed to fetch admin profile")
+            throw new Error("failed to fetch super admin profile")
         }
     }
 
-    async updateAdmin(updateAdminProfileDto: UpdateAdminDto, req: any) {
-        console.log("admin dto", updateAdminProfileDto)
+    async updateSuperAdmin(updateAdminProfileDto: UpdateSuperAdminDto, req: any) {
+        console.log("admin dto", updateAdminProfileDto, req.user.sub)
         try {
-            const admin_profile_exist = await AdminProfile.findOne({
+            const super_admin_profile_exist = await SuperAdminProfile.findOne({
                 where: {
                     user_id: {
                         [Op.eq]: req.user.sub
@@ -43,16 +47,17 @@ export class ProfileService {
                 }
             })
 
-            if (!admin_profile_exist) {
-                await AdminProfile.create({
+            if (!super_admin_profile_exist) {
+                await SuperAdminProfile.create({
                     openai: updateAdminProfileDto.openai,
                     dalle: updateAdminProfileDto.dalle,
                     deepgram: updateAdminProfileDto.deepgram,
                     master_prompt: updateAdminProfileDto.master_prompt,
-                    user_id: req.user.sub
+                    user_id: req.user.sub,
+                    id: req.user.sub
                 })
             }
-            await AdminProfile.update({
+            await SuperAdminProfile.update({
                 openai: updateAdminProfileDto.openai,
                 dalle: updateAdminProfileDto.dalle,
                 deepgram: updateAdminProfileDto.deepgram,
@@ -66,13 +71,158 @@ export class ProfileService {
             })
             return {
                 statusCode: 200,
-                message: "admin updated successfully",
+                message: "super admin updated successfully",
 
             }
         } catch (error) {
-            throw new Error("failed to update admin")
+            console.log("error", error)
+            throw new Error("failed to updateb super admin")
         }
     }
+
+
+    async updateAdmin(updateAdminProfileDto: UpdateAdminProfileDto, req: any) {
+        console.log("admin dto", updateAdminProfileDto)
+        try {
+            const admin_profile = await AdminProfile.findOne({
+                where: {
+                    user_id: {
+                        [Op.eq]: updateAdminProfileDto.admin_id
+                    }
+                }
+            })
+
+
+            await admin_profile.update({
+                school_id: updateAdminProfileDto.school_id
+            })
+            return {
+                statusCode: 200,
+                message: "super admin updated successfully",
+
+            }
+        } catch (error) {
+            throw new Error("failed to updateb super admin")
+        }
+    }
+    async getParentByID(parentId: number, req: any) {
+        try {
+            const parent = await User.findOne({
+                attributes: {
+                    exclude: ["password"]
+                },
+                include: [{
+                    model: ParentProfile,
+                    include: [{
+                        model: StudentProfile,
+                        include: [{
+                            model: User,
+                            attributes: {
+                                exclude: ["password"]
+                            }
+                        }]
+                    }]
+
+                }],
+                where: {
+                    id: {
+                        [Op.eq]: parentId
+                    },
+                    role: {
+                        [Op.eq]: Role.PARENT
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                data: parent
+
+            }
+        } catch (error) {
+            throw new Error("failed to fetch parents profile")
+        }
+    }
+    async getAllParents(req: any) {
+        try {
+            const parents = await User.findAll({
+                attributes: {
+                    exclude: ["password"]
+                },
+                include: [{
+                    model: ParentProfile,
+
+                }],
+                where: {
+                    role: {
+                        [Op.eq]: Role.PARENT
+                    },
+                    school_id: {
+                        [Op.eq]: req.user.school_id
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                data: parents
+
+            }
+        } catch (error) {
+            throw new Error("failed to fetch parents profile")
+        }
+    }
+    async getAllAdmins(req: any) {
+        try {
+            const admins = await User.findAll({
+                include: [{
+                    model: AdminProfile,
+                }],
+                where: {
+                    role: {
+                        [Op.eq]: Role.ADMIN
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                data: admins
+
+            }
+        } catch (error) {
+            throw new Error("failed to fetch admin profile")
+        }
+    }
+
+    async getAdminProfile(admin_id: string, req: any) {
+        try {
+            const admin_profile = await User.findOne({
+                include: [{
+                    model: AdminProfile,
+                    where: {
+                        id: {
+                            [Op.eq]: Number(admin_id)
+                        }
+                    }, include: [
+                        {
+                            model: School,
+                        },
+                    ],
+                },
+
+
+                ]
+
+            })
+            return {
+                statusCode: 200,
+                data: admin_profile
+
+            }
+        } catch (error) {
+            throw new Error("failed to fetch admin profile")
+        }
+    }
+
+
 
     //teacher management
     async deleteJoinTeacherSubjectLevel(deleteJoinTeacherSubjectLevelDto: DeleteJoinTeacherSubjectLevel, req: any) {
@@ -104,22 +254,30 @@ export class ProfileService {
         try {
 
             const teacher_data = await TeacherProfile.findOne({
+                include: [
+                    {
+                        model: Subject
+                    }
+                ],
                 where: {
                     user_id: {
                         [Op.eq]: getJoinTeacherSubjectLevelDto.user_id
                     }
                 }
             }).then(async (teacher) => {
-                const data = await JoinTeacherSubjectLevel.findAll({
-                    where: {
+                // const data = await JoinTeacherSubjectLevel.findAll({
+                //     include:[{
+                //         model
+                //     }],
+                //     where: {
 
-                        teacher_id: {
-                            [Op.eq]: teacher.id
-                        },
-                    }
-                })
+                //         teacher_id: {
+                //             [Op.eq]: teacher.id
+                //         },
+                //     }
+                // })
 
-                return data
+                // return data
 
             })
             return {
@@ -175,10 +333,19 @@ export class ProfileService {
 
     async getTeacherProfile(getTeacherProfile: GetTeacherProfileDto, req: any) {
         try {
-            const get_profile = await TeacherProfile.findOne({
+            const get_profile = await User.findOne({
+                attributes: [],
+                include: [{
+                    model: TeacherProfile,
+
+                    include: [{
+                        model: Subject
+                    }]
+                }],
                 where: {
-                    user_id: getTeacherProfile.user_id
-                }
+                    id: getTeacherProfile.user_id
+                },
+
             });
             console.log("proflie ", get_profile)
 
@@ -226,7 +393,8 @@ export class ProfileService {
         try {
             const get_profile = await StudentProfile.findOne({
                 where: {
-                    user_id: getProfileDto.user_id
+                    user_id: getProfileDto.user_id,
+                    school_id: req.user.school_id,
                 }
             });
             console.log("proflie ", get_profile)
@@ -242,29 +410,45 @@ export class ProfileService {
         }
     }
 
-    async getStudentsByLevel(req: any) {
+    async getChildren(req: any) {
         try {
 
-            const data = await TeacherProfile.findOne({
+            const data = await User.findAll({
+
                 where: {
-                    user_id: {
+                    level_id: {
+                        [Op.eq]: req.user.level_id
+                    },
+                    school_id: {
+                        [Op.eq]: req.user.school_id
+                    },
+                    parent_id: {
                         [Op.eq]: req.user.sub
                     }
                 }
-            }).then(async (teacher) => {
-                const students = await StudentProfile.findAll({
-
-                    where: {
-                        level_id: {
-                            [Op.eq]: teacher.level_id
-                        }
-                    }
-                })
-
-                return students
             })
+            return {
+                statusCode: 200,
+                data: data
+            }
+        } catch (error) {
+            throw new Error("Error getting students by level")
+        }
+    }
+    async getStudentsByLevel(req: any) {
+        try {
 
+            const data = await StudentProfile.findAll({
 
+                where: {
+                    level_id: {
+                        [Op.eq]: req.user.level_id
+                    },
+                    school_id: {
+                        [Op.eq]: req.user.school_id
+                    },
+                }
+            })
             return {
                 statusCode: 200,
                 data: data
@@ -279,7 +463,8 @@ export class ProfileService {
         try {
             const update_profile = await StudentProfile.update({
                 level_id: updateProfileDto.level_id,
-                user_roll_no: updateProfileDto.user_roll_no
+                user_roll_no: updateProfileDto.user_roll_no,
+                parent_id: updateProfileDto.parent_id
 
             }, {
                 where: {

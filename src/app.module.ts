@@ -10,7 +10,6 @@ import { RefreshToken } from './user/entities/refreshToken.entity';
 import { BotModule } from './bot/bot.module';
 import { ContextDataModule } from './context_data/contextData.module';
 import { Bot } from './bot/entities/bot.entity';
-import { ContextData } from './context_data/entities/contextData.entity';
 import { Join_BotContextData } from './bot/entities/join_botContextData.entity';
 import { ApiModule } from './api/api.module';
 import { File } from './context_data/entities/file.entity';
@@ -18,15 +17,8 @@ import { ChatModule } from './chat/chat.module';
 import { Chat } from './chat/entities/chat.entity';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-// import { UserProfileService } from './user-profile/user-profile.service';
-// import { UserProfileController } from './user-profile/user-profile.controller';
-// import { UserProfileModule } from './user-profile/user-profile.module';
-// import { ProfileService } from './profile/profile.service';
 import { StudentProfile } from './profile/entities/student-profile.entity';
-import { API } from './api/entities/api.entity';
-import { UserSeeder } from './seeds/user.seeder';
 import { ProfileModule } from './profile/profile.module';
-// import { ProfileModule } from './profile/profile.module';
 import { SubjectModule } from './subject/subject.module';
 import { LevelModule } from './level/level.module';
 import { TeacherProfile } from './profile/entities/teacher-profile.entity';
@@ -45,6 +37,10 @@ import { QuizAttempt } from './quiz-attempt/entities/quiz-attempt.entity';
 import { Question } from './question/entities/question.entity';
 import { Option } from './option/entities/option.entity';
 import { Answer } from './answer/entities/answer.entity';
+import { SchoolModule } from './school/school.module';
+import { School } from './school/entities/school.entity';
+import { SuperAdminProfile } from './profile/entities/super-admin.entity';
+import { ParentProfile } from './profile/entities/parent-profile.entity';
 
 @Module({
   imports: [
@@ -63,7 +59,7 @@ import { Answer } from './answer/entities/answer.entity';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadModels: true,
-      models: [User, Otp, RefreshToken, Bot, ContextData, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, Level, Subject, API, Quiz, QuizAttempt,Question, Option, Answer ],
+      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile ,AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School],
       synchronize: process.env.DB_SYNCHRONIZE == 'true' ? true : false,
       logging: true,
 
@@ -94,17 +90,11 @@ import { Answer } from './answer/entities/answer.entity';
     QuizAttemptModule,
     QuestionModule,
     OptionModule,
-    AnswerModule
+    AnswerModule,
+    SchoolModule,
   ],
   controllers: [AppController],
-  providers: [AppService,
-    UserSeeder
-    //  ProfileService
-    //   , {
-    //   provide: APP_GUARD,
-    //   useClass: RolesGuard
-    // }
-  ],
+  providers: [AppService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

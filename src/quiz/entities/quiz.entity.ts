@@ -1,7 +1,9 @@
 // src/models/Quiz.model.js
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo, HasMany } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo, HasMany, Default } from 'sequelize-typescript';
 import { Level } from 'src/level/entity/level.entity';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { Question } from 'src/question/entities/question.entity';
+import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { QuizType } from 'src/utils/quizType.enum';
 
@@ -20,7 +22,7 @@ export class Quiz extends Model<Quiz> {
   @Column({ type: DataType.STRING, allowNull: false })
   description: string;
 
-  @Column({ type: DataType.ENUM(QuizType.MCQS, QuizType.QA) , allowNull: false })
+  @Column({ type: DataType.ENUM(QuizType.MCQS, QuizType.QA), allowNull: false })
   quiz_type: string;
 
   @Column({ type: DataType.DATE, allowNull: false })
@@ -32,20 +34,34 @@ export class Quiz extends Model<Quiz> {
   @Column({ type: DataType.INTEGER, allowNull: false })
   duration: number; // Duration in minutes
 
+  @Default(0)
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  total_score: number; // Duration in minutes
+
   @ForeignKey(() => Level)
   @Column({ type: DataType.INTEGER, allowNull: false })
   level_id: number;
 
-  @BelongsTo(() => Level)
-  level: Level;
+  @ForeignKey(() => TeacherProfile)
+  @Column({ type: DataType.INTEGER, allowNull: false })
+  teacher_id: number;
 
   @ForeignKey(() => Subject)
   @Column({ type: DataType.INTEGER, allowNull: false })
   subject_id: number;
 
-  @BelongsTo(() => Subject)
-  subject: Subject;
+  @BelongsTo(() => TeacherProfile, { onDelete: 'CASCADE' })
+  teacher!: TeacherProfile
 
-  @HasMany(() => Question)
+  @BelongsTo(() => Level)
+  level!: Level;
+
+  @BelongsTo(() => Subject, {onDelete: "CASCADE"})
+  subject!: Subject;
+
+  @HasMany(() => Question, { onDelete: 'CASCADE' })
   questions: Question[];
+
+  @HasMany(() => QuizAttempt, { onDelete: 'CASCADE' })
+  quiz_attempts: QuizAttempt[]
 }

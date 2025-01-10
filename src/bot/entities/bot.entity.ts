@@ -4,15 +4,17 @@ import {
     Column,
     DataType,
     ForeignKey,
+    HasMany,
     Model,
     PrimaryKey,
     Table,
 } from 'sequelize-typescript';
-import { User } from 'src/user/entities/user.entity';
 import { Join_BotContextData } from './join_botContextData.entity';
 import { File } from 'src/context_data/entities/file.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { Level } from 'src/level/entity/level.entity';
+import { School } from 'src/school/entities/school.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
 
 @Table({
     tableName: 'bots',
@@ -70,23 +72,24 @@ export class Bot extends Model {
     })
     subject_id: number;
 
-    @ForeignKey(() => User)
+    @ForeignKey(() => School)
     @Column({
         type: DataType.INTEGER,
     })
-    user_id: number;
+    school_id: number;
 
-    @BelongsTo(() => User, {
-        onDelete: "CASCADE",
-    })
-    user!: User
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
+    school!: School
 
     @BelongsToMany(() => File, () => Join_BotContextData)
-    file!: File[];
+    files!: File[];
 
     @BelongsTo(() => Subject)
     subject!: Subject
 
     @BelongsTo(() => Level)
     level!: Level
+
+    @HasMany(() => Chat, { onDelete: 'CASCADE' })
+    chats!: Chat[]
 }

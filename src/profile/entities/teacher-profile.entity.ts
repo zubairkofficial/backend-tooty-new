@@ -1,15 +1,20 @@
 import {
     BelongsTo,
+    BelongsToMany,
     Column,
     DataType,
     ForeignKey,
+    HasMany,
     Model,
     PrimaryKey,
     Table,
-    Unique,
 } from 'sequelize-typescript';
 import { Level } from 'src/level/entity/level.entity';
+import { Quiz } from 'src/quiz/entities/quiz.entity';
+import { School } from 'src/school/entities/school.entity';
+import { Subject } from 'src/subject/entity/subject.entity';
 import { User } from 'src/user/entities/user.entity';
+import { JoinTeacherSubjectLevel } from './join-teacher-subject-level.entity';
 
 
 @Table({
@@ -35,6 +40,11 @@ export class TeacherProfile extends Model {
     })
     user_id: number;
 
+    @ForeignKey(() => School)
+    @Column({
+        type: DataType.INTEGER,
+    })
+    school_id: number;
 
     @ForeignKey(() => Level)
     @Column({
@@ -42,6 +52,21 @@ export class TeacherProfile extends Model {
     })
     level_id: number;
 
-    @BelongsTo(() => User)
+    @BelongsTo(() => Level)
+    level!: Level
+
+    @BelongsTo(() => User, { onDelete: 'CASCADE' })
     user!: User
+
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
+    school!: School
+
+    @HasMany(() => Quiz, { onDelete: 'CASCADE' })
+    quizes!: Quiz[]
+
+    @BelongsToMany(() => Subject, () => JoinTeacherSubjectLevel)
+    subjects!: Subject[]
+
+    @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
+    level_join_table!: Level[]
 }

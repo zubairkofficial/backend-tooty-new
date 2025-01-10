@@ -1,5 +1,6 @@
 import {
     BelongsTo,
+    BelongsToMany,
     Column,
     DataType,
     ForeignKey,
@@ -13,6 +14,10 @@ import {
 import { Bot } from 'src/bot/entities/bot.entity';
 import { File } from 'src/context_data/entities/file.entity';
 import { Level } from 'src/level/entity/level.entity';
+import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { Quiz } from 'src/quiz/entities/quiz.entity';
+import { School } from 'src/school/entities/school.entity';
 
 
 @Table({
@@ -50,13 +55,30 @@ export class Subject extends Model {
     })
     level_id: number
 
+    @ForeignKey(() => School)
+    @Column({
+        type: DataType.INTEGER
+    })
+    school_id: number
+
     @HasMany(() => File)
     files!: File[]
+
+    @HasMany(() => Quiz, { onDelete: "CASCADE" })
+    quizez!: Quiz[]
 
     @BelongsTo(() => Level)
     level!: Level
 
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
+    school!: School
 
     @HasOne(() => Bot)
     bot!: Bot
+
+    @BelongsToMany(() => TeacherProfile, () => JoinTeacherSubjectLevel)
+    teachers!: TeacherProfile[]
+
+    @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
+    level_join_table!: Level[]
 }

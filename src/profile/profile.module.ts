@@ -8,9 +8,14 @@ import { JwtService } from '@nestjs/jwt';
 import { TeacherProfile } from './entities/teacher-profile.entity';
 import { JoinTeacherSubjectLevel } from './entities/join-teacher-subject-level.entity';
 import { AdminProfile } from './entities/admin-profile.entity';
+import { SuperAdminProfile } from './entities/super-admin.entity';
+import { School } from 'src/school/entities/school.entity';
+import { Subject } from 'src/subject/entity/subject.entity';
+import { User } from 'src/user/entities/user.entity';
+import { ParentProfile } from './entities/parent-profile.entity';
 
 @Module({
-    imports: [SequelizeModule.forFeature([StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel]), ConfigModule],
+    imports: [SequelizeModule.forFeature([SuperAdminProfile,StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, School, Subject,User, ParentProfile]), ConfigModule],
     controllers: [ProfileController],
     providers: [ProfileService, JwtService]
 })

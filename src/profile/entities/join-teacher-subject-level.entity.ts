@@ -8,12 +8,14 @@ import {
     Table,
 } from 'sequelize-typescript';
 import { TeacherProfile } from './teacher-profile.entity';
+import { Level } from 'src/level/entity/level.entity';
+import { Subject } from 'src/subject/entity/subject.entity';
 
 
 @Table({
     tableName: 'join-teacher-subject-level',
     timestamps: true,
-    paranoid: true
+ 
 })
 export class JoinTeacherSubjectLevel extends Model {
     @PrimaryKey
@@ -23,16 +25,17 @@ export class JoinTeacherSubjectLevel extends Model {
     })
     id: number; //it must be equal to the id in User table
 
+    @ForeignKey(() => Level)
     @Column({
         type: DataType.INTEGER,
     })
     level_id: number;
 
+    @ForeignKey(() => Subject)
     @Column({
         type: DataType.INTEGER,
     })
     subject_id: number;
-
 
     @ForeignKey(() => TeacherProfile)
     @Column({
@@ -40,9 +43,13 @@ export class JoinTeacherSubjectLevel extends Model {
     })
     teacher_id: number // it will be the same as user id
 
-
     @BelongsTo(() => TeacherProfile)
     teacher!: TeacherProfile
 
+    @BelongsTo(() => Level)
+    level!: Level
+
+    @BelongsTo(() => Subject)
+    subject!: Subject
 
 }

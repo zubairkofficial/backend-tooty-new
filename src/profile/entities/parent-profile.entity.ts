@@ -3,6 +3,7 @@ import {
     Column,
     DataType,
     ForeignKey,
+    HasMany,
     HasOne,
     Model,
     PrimaryKey,
@@ -11,14 +12,15 @@ import {
 } from 'sequelize-typescript';
 import { School } from 'src/school/entities/school.entity';
 import { User } from 'src/user/entities/user.entity';
+import { StudentProfile } from './student-profile.entity';
 
 
 @Table({
-    tableName: 'admin-profile',
+    tableName: 'parent-profile',
     timestamps: true,
     paranoid: true
 })
-export class AdminProfile extends Model {
+export class ParentProfile extends Model {
     @PrimaryKey
     @Column({
 
@@ -44,6 +46,10 @@ export class AdminProfile extends Model {
     user!: User
 
 
-    @BelongsTo(() => School)
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
     school!: School
+
+    @HasMany(() => StudentProfile)
+    children!: StudentProfile[]
+
 }

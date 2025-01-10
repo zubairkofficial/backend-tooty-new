@@ -44,6 +44,7 @@ export class ContextDataController {
         subject_id: {
           type: 'string',
         },
+        
       },
     },
   })
@@ -97,7 +98,7 @@ export class ContextDataController {
     return this.contextDataService.deleteFile(deleteFileDto, req);
   }
 
-  @Get('files-by-user')
+  @Get('files-by-school')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get files uploaded by a user' })
@@ -108,7 +109,7 @@ export class ContextDataController {
     @Query('page') page?: number, // Optional parameter
     @Query('limit') limit?: number, // Optional parameter
   ) {
-    return this.contextDataService.getAllFilesByUser(req, page, limit);
+    return this.contextDataService.getAllFilesBySchool(req, page, limit);
   }
 
   @Post('files-by-subject')

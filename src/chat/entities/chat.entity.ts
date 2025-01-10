@@ -26,9 +26,9 @@ export class Chat extends Model {
   @Column({ type: DataType.BOOLEAN, defaultValue: false })
   is_bot: boolean;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, { onDelete: 'CASCADE' })
   user!: User;
 
-  @BelongsTo(() => Bot)
+  @BelongsTo(() => Bot, { onDelete: 'CASCADE' })
   bot!: Bot;
 }

@@ -1,35 +1,10 @@
 import { Op } from "sequelize";
-import { API } from "./entities/api.entity";
 import { GetVoiceModelDto, UpdateApiKeyDto } from "./dto/update-api.dto";
-import { AdminProfile } from "src/profile/entities/admin-profile.entity";
 import axios from "axios";
+import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
 
 
 export class ApiService {
-
-
-    // async getApiKey(getApiKeyDto: getApiKeyDto, req: any) {
-
-    //     console.log("get api name key",api_name)
-    //     try {
-    //         const data = await API.findOne({
-    //             where: {
-    //                 api_name: {
-    //                     [Op.eq]: get
-    //                 }
-    //             }
-    //         })
-    //         return {
-    //             statusCode: 200,
-    //             api: data.api_key
-    //         }
-    //     } catch (error) {
-    //         return {
-    //             api: ""
-    //         }
-    //     }
-    // }
-
 
     async getVoiceModel(getVoiceModelDto: GetVoiceModelDto) {
         try {
@@ -67,7 +42,7 @@ export class ApiService {
 
     async getDeepGramApi(req: any) {
         try {
-            const data = await AdminProfile.findOne({
+            const data = await SuperAdminProfile.findOne({
                 attributes: ["deepgram"]
             })
             return {
@@ -81,7 +56,7 @@ export class ApiService {
 
     async getAllApiKeys(req: any) {
         try {
-            const data = await AdminProfile.findAll({
+            const data = await SuperAdminProfile.findAll({
                 where: {
                     user_id: {
                         [Op.eq]: req.user.sub
@@ -97,28 +72,12 @@ export class ApiService {
         }
     }
 
-    // async addAPIkey(addAPIkeyDto: AddAPIkeyDto, req: any) {
-    //     try {
-    //         await API.create({
-    //             api_key: addAPIkeyDto.api_key,
-    //             api_name: addAPIkeyDto.api_name + "-" + req.user.sub,
-    //             user_id: req.user.sub //get it throough token validation
-    //         })
-
-    //         return {
-    //             statusCode: 200,
-    //             message: "api added successfully"
-    //         }
-    //     } catch (error) {
-    //         throw new Error("failed adding api key")
-    //     }
-    // }
 
 
     async updateApiKey(updateApiKeyDto: UpdateApiKeyDto, req: any) {
         try {
             if (updateApiKeyDto.api_name == "openai") {
-                await AdminProfile.update({
+                await SuperAdminProfile.update({
                     openai: updateApiKeyDto.api_key,
                 },
                     {
@@ -131,7 +90,7 @@ export class ApiService {
             }
 
             if (updateApiKeyDto.api_name == "dalle") {
-                await AdminProfile.update({
+                await SuperAdminProfile.update({
                     dalle: updateApiKeyDto.api_key,
                 },
                     {
@@ -142,7 +101,7 @@ export class ApiService {
                     })
             }
             if (updateApiKeyDto.api_name == "deepgram") {
-                await AdminProfile.update({
+                await SuperAdminProfile.update({
                     deepgram: updateApiKeyDto.api_key,
                 },
                     {
@@ -161,23 +120,6 @@ export class ApiService {
         }
 
     }
-    // async deleteApiKey(deleteApiKeyDto: DeleteApiKeyDto, req: any) {
-    //     try {
-    //         await API.destroy({
-    //             where: {
-    //                 id: {
-    //                     [Op.eq]: deleteApiKeyDto.id
-    //                 }
-    //             }
-    //         })
-    //         return {
-    //             statusCode: 200,
-    //             message: "api deleted successfully"
-    //         }
-    //     } catch (error) {
-    //         throw new Error("failed deleting api key")
-    //     }
 
-    // }
 
 }

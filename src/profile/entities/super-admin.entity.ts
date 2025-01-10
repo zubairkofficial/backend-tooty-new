@@ -2,43 +2,53 @@ import {
     BelongsTo,
     Column,
     DataType,
+    Default,
     ForeignKey,
     Model,
     PrimaryKey,
     Table,
     Unique,
 } from 'sequelize-typescript';
-
 import { User } from 'src/user/entities/user.entity';
 
+
 @Table({
-    tableName: 'apis',
+    tableName: 'super-admin-profile',
     timestamps: true,
+    paranoid: true
 })
-export class API extends Model {
+export class SuperAdminProfile extends Model {
     @PrimaryKey
     @Column({
-        autoIncrement: true,
+       
         type: DataType.INTEGER,
     })
     id: number;
 
     @Column({
-        type: DataType.STRING,
+        type: DataType.TEXT,
     })
-    api_key: string;
+    openai: string
 
-
-    //to make the name of api key unique in the DB, we will join the api key name from user with the user_id
-    @Unique
     @Column({
-        type: DataType.STRING,
+        type: DataType.TEXT,
     })
-    api_name: string;
+    dalle: string
 
+    @Column({
+        type: DataType.TEXT,
+    })
+    deepgram: string
+
+    @Column({
+        type: DataType.TEXT,
+    })
+    master_prompt: string
+
+    @Unique
     @ForeignKey(() => User)
     @Column({
-        type: DataType.INTEGER,
+        type: DataType.INTEGER
     })
     user_id: number;
 

@@ -1,12 +1,9 @@
 import {
-    BeforeCreate,
-    BeforeUpdate,
     BelongsTo,
     BelongsToMany,
     Column,
     DataType,
     ForeignKey,
-    HasMany,
     Model,
     PrimaryKey,
     Table,
@@ -15,13 +12,12 @@ import {
 
 import { Bot } from '../../bot/entities/bot.entity';
 import { Join_BotContextData } from '../../bot/entities/join_botContextData.entity';
-import { ContextData } from './contextData.entity';
-import { User } from 'src/user/entities/user.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
-// import slugify from 'slugify';
+import { School } from 'src/school/entities/school.entity';
+
 
 @Table({
-    tableName: 'file',
+    tableName: 'files',
     timestamps: true,
     paranoid: true
 })
@@ -33,11 +29,11 @@ export class File extends Model {
     })
     id: number;
 
-    @ForeignKey(() => User)
+    @ForeignKey(() => School)
     @Column({
         type: DataType.INTEGER,
     })
-    user_id: number;
+    school_id: number;
 
     @ForeignKey(() => Subject)
     @Column({
@@ -62,22 +58,11 @@ export class File extends Model {
     })
     slug: string;
 
-
-    // @BeforeCreate
-    // @BeforeUpdate
-    // static generateSlug(file: File) {
-    //     file.slug = slugify(file.file_name, { lower: true, trim: true, strict: true });
-    // }
-
-    @HasMany(() => ContextData)
-    chunks: ContextData[]
-
-    @BelongsTo(() => User)
-    user!: User;
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
+    school!: School;
 
     @BelongsTo(() => Subject)
     subject!: Subject;
-
 
     @BelongsToMany(() => Bot, () => Join_BotContextData)
     bots!: Bot[];

@@ -3,13 +3,17 @@ import {
     Column,
     DataType,
     ForeignKey,
+    HasMany,
     Model,
     PrimaryKey,
     Table,
     Unique,
 } from 'sequelize-typescript';
 import { Level } from 'src/level/entity/level.entity';
+import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
+import { School } from 'src/school/entities/school.entity';
 import { User } from 'src/user/entities/user.entity';
+import { ParentProfile } from './parent-profile.entity';
 
 
 @Table({
@@ -22,25 +26,20 @@ export class StudentProfile extends Model {
     @Column({
         type: DataType.INTEGER,
     })
-    id: number; 
+    id: number;
 
 
+    @Unique
     @Column({
         type: DataType.STRING,
     })
     user_roll_no: string;
 
-
-    @ForeignKey(() => Level)
+    @ForeignKey(() => School)
     @Column({
         type: DataType.INTEGER,
     })
-    level_id: number;
-
-
-    @BelongsTo(() => Level)
-    level!: Level
-
+    school_id: number;
 
     @ForeignKey(() => User)
     @Column({
@@ -48,7 +47,27 @@ export class StudentProfile extends Model {
     })
     user_id: number;
 
+    @ForeignKey(() => Level)
+    @Column({
+        type: DataType.INTEGER,
+    })
+    level_id: number;
 
-    @BelongsTo(() => User)
+    @ForeignKey(() => ParentProfile)
+    @Column({
+        type: DataType.INTEGER,
+    })
+    parent_id: number;
+
+    @BelongsTo(() => School, { onDelete: 'CASCADE' })
+    school!: School
+
+    @BelongsTo(() => Level)
+    level!: Level
+
+    @BelongsTo(() => User, { onDelete: 'CASCADE' })
     user!: User
+
+    @HasMany(() => QuizAttempt, { onDelete: 'CASCADE' })
+    attempted_quizes!: QuizAttempt[]
 }

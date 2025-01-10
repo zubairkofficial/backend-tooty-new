@@ -15,12 +15,12 @@ export class Option extends Model<Option> {
   text: string;
 
   @Column({ type: DataType.BOOLEAN, allowNull: false })
-  isCorrect: boolean;
+  is_correct: boolean;
 
   @ForeignKey(() => Question)
   @Column({ type: DataType.INTEGER, allowNull: false })
-  questionId: number;
+  question_id: number;
 
-  @BelongsTo(() => Question)
+  @BelongsTo(() => Question, { onDelete: 'CASCADE' })
   question: Question;
 }

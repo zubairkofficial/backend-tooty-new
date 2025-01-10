@@ -1,12 +1,12 @@
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  UseGuards, 
-  Req, 
-  Get, 
-  UseInterceptors, 
-  UploadedFile, 
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Get,
+  UseInterceptors,
+  UploadedFile,
   Delete,
   BadRequestException,
   Put,
@@ -14,7 +14,8 @@ import {
   Res
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { 
+import {
+  CreateAdminBySuperAdminDto,
   CreateUserByAdminDto,
   CreateUserDto,
   DeleteUserDto,
@@ -39,35 +40,35 @@ import { Response } from 'express';
 @ApiTags('auth') // Grouping for Swagger
 @Controller('auth')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Put('update-avatar')
-@Roles(Role.ADMIN, Role.TEACHER, Role.USER)
-@UseGuards(JwtAuthGuard, RolesGuard)
-@UseInterceptors(FileInterceptor('avatar', multerStorageConfig)) // Ensure property matches Swagger
-@ApiOperation({ summary: 'Update user avatar' })
-@ApiBearerAuth('access-token')
-@ApiResponse({ status: 200, description: 'Avatar updated successfully' })
-@ApiResponse({ status: 400, description: 'No image uploaded' })
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      avatar: {
-        type: 'string',
-        format: 'binary',
+  @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor('avatar', multerStorageConfig)) // Ensure property matches Swagger
+  @ApiOperation({ summary: 'Update user avatar' })
+  @ApiBearerAuth('access-token')
+  @ApiResponse({ status: 200, description: 'Avatar updated successfully' })
+  @ApiResponse({ status: 400, description: 'No image uploaded' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          format: 'binary',
+        },
       },
+      required: ['avatar'], // Ensure property matches `@UploadedFile()`
     },
-    required: ['avatar'], // Ensure property matches `@UploadedFile()`
-  },
-})
-async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any) {
-  if (!avatar) {
-    throw new BadRequestException('No image uploaded');
+  })
+  async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any) {
+    if (!avatar) {
+      throw new BadRequestException('No image uploaded');
+    }
+    return this.userService.updateAvatar(avatar, req.user);
   }
-  return this.userService.updateAvatar(avatar, req.user);
-}
 
 
   @Post('get-user')
@@ -83,10 +84,23 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
     return this.userService.getUser(getUserDto, req);
   }
 
+
+  @Get('get-all-parents')
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiOperation({ summary: 'Get all parents' })
+  @ApiResponse({ status: 200, description: 'Teachers parents' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  async getAllParents(@Req() req: any, @Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.userService.getAllUsersByRole(Role.PARENT, req, page, limit);
+  }
+
   @Get('get-all-teachers')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Get all teachers' })
   @ApiResponse({ status: 200, description: 'Teachers retrieved' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -98,7 +112,7 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
   @Get('get-all-students')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Get all students' })
   @ApiResponse({ status: 200, description: 'Students retrieved' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -107,14 +121,36 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
     return this.userService.getAllUsersByRole(Role.USER, req, page, limit);
   }
 
+
+  // it belongs to super admin to create admin
+  @Post('create-admin')
+  @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiOperation({ summary: 'Create a admin by super_admin' })
+  @ApiResponse({ status: 201, description: 'Admin created successfully' })
+  async createAdmin(@Body() createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
+    return this.userService.createAdmin(createAdminBySuperAdminDto);
+  }
+
+  ///this belongs to the admin of school to create user, teacher etc..
   @Post('create-user')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Create a user by admin' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
-  async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto) {
-    return this.userService.createUser(createUserByAdminDto);
+  async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto, @Req() req: any) {
+    return this.userService.createUser(createUserByAdminDto, req);
+  }
+  @Delete('delete-parent')
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Delete a user' })
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  async deleteParent(@Body() deleteUserDto: DeleteUserDto) {
+    return this.userService.deleteParent(deleteUserDto);
   }
 
   @Delete('delete-user')
@@ -130,7 +166,7 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
   @Delete('delete-teacher')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Delete a teacher' })
   @ApiResponse({ status: 200, description: 'Teacher deleted successfully' })
   async deleteTeacher(@Body() deleteUserDto: DeleteUserDto) {
@@ -146,7 +182,6 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
 
   @Post('login')
   @ApiOperation({ summary: 'User login' })
-  
   @ApiResponse({ status: 200, description: 'User logged in successfully' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() userLoginDto: UserLoginDto) {
@@ -154,7 +189,7 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
   }
 
   @Post('logout')
-  @Roles(Role.USER, Role.TEACHER, Role.ADMIN)
+  @Roles(Role.USER, Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'User logout' })
   @ApiBearerAuth('access-token')// JWT Bearer authentication
@@ -180,7 +215,7 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
   @Put('update-user')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
 
   @ApiOperation({ summary: 'Update user details' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
@@ -189,7 +224,7 @@ async updateAvatar(@UploadedFile() avatar: Express.Multer.File, @Req() req: any)
   }
 
   @Put('update-password')
-@ApiBearerAuth('access-token')// JWT Bearer authentication
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Update user password' })
   @ApiResponse({ status: 200, description: 'Password updated successfully' })
   async updatePassword(@Body() updatePasswordDto: UpdatePasswordDto, @Req() req: any) {

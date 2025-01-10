@@ -1,28 +1,33 @@
 // src/guards/roles.guard.ts
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { Role } from '../utils/roles.enum';
 
-@Injectable()
-export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) { }
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<Role[]>(ROLES_KEY, context.getHandler());
-    if (!requiredRoles) {
+export class RolesGuard implements CanActivate {
+  constructor() { }
+
+  private reflector = new Reflector();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const roles = this.reflector.get<Role[]>(ROLES_KEY, context.getHandler()); // Get roles metadata
+    if (!roles) {
       return true; // If no roles are defined, allow access
     }
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user; // Assuming user is attached to request via a previous middleware or guard
+    const user = request.user; // The user object from JwtAuthGuard
 
-    if (!user || !requiredRoles.some(role => user.role == role)) {
-      console.log("roles guard denied", user)
-      console.log("roles guard denied")
-      throw new ForbiddenException('Access Denied');
+    if (!user) {
+      throw new ForbiddenException('Access Denied: No user information');
+    }
+
+    const hasRole = roles.some(role => user.role === role); // Check if user has any of the permitted roles
+    if (!hasRole) {
+      throw new ForbiddenException('Access Denied: Insufficient role');
     }
 
     return true;
   }
+
 }

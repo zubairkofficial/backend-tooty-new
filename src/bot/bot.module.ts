@@ -7,9 +7,10 @@ import { BotService } from './bot.service';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from 'src/chat/chat.service';
 import { ApiService } from 'src/api/api.service';
+import { School } from 'src/school/entities/school.entity';
 
 @Module({
-    imports: [SequelizeModule.forFeature([Bot]), ConfigModule],
+    imports: [SequelizeModule.forFeature([Bot, School]), ConfigModule],
     controllers: [BotController],
     providers: [BotService, JwtService, ChatService, ApiService],
 })

@@ -24,19 +24,19 @@ export class LevelController {
     }
 
     @Get('get-all-levels')
-@Roles(Role.ADMIN, Role.TEACHER, Role.USER)
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiOperation({ summary: 'Get all levels with pagination' })
-@ApiResponse({ status: 200, description: 'Successfully retrieved all levels' })
-@ApiResponse({ status: 403, description: 'Forbidden' })
-async getAllLevels(
-  @Req() req: any,
-  @Query('page') page?: number, // Optional query parameter
-  @Query('limit') limit?: number, // Optional query parameter
-) {
-  return this.levelServices.getAllLevels({ page, limit }, req);
-}
-    
+    @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @ApiOperation({ summary: 'Get all levels with pagination' })
+    @ApiResponse({ status: 200, description: 'Successfully retrieved all levels' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    async getAllLevels(
+        @Req() req: any,
+        @Query('page') page?: number, // Optional query parameter
+        @Query('limit') limit?: number, // Optional query parameter
+    ) {
+        return this.levelServices.getAllLevels({ page, limit }, req);
+    }
+
     @Put('update-level')
     @Roles(Role.ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)

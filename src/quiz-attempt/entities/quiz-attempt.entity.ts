@@ -1,6 +1,7 @@
-import { Table, Model, Column, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
+import { Table, Model, Column, DataType, ForeignKey, BelongsTo, HasMany, Default } from 'sequelize-typescript';
+import { Answer } from 'src/answer/entities/answer.entity';
+import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { Quiz } from 'src/quiz/entities/quiz.entity';
-import { User } from 'src/user/entities/user.entity';
 
 @Table({ tableName: 'quiz_attempts' }) // Define the table name
 export class QuizAttempt extends Model<QuizAttempt> {
@@ -16,24 +17,33 @@ export class QuizAttempt extends Model<QuizAttempt> {
     type: DataType.INTEGER,
     allowNull: false,
   })
-  quizId: number;
+  quiz_id: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => StudentProfile)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
   })
-  userId: number;
+  student_id: number;
 
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.FLOAT,
     allowNull: false,
   })
-  score: number;
+  obtained_score: number;
+
+  @Default(false)
+  @Column({
+    type: DataType.BOOLEAN,
+  })
+  marked: boolean;
 
   @BelongsTo(() => Quiz)
   quiz: Quiz;
 
-  @BelongsTo(() => User)
-  user: User;
+  @BelongsTo(() => StudentProfile, { onDelete: 'CASCADE' })
+  student: StudentProfile;
+
+  @HasMany(() => Answer, { onDelete: 'CASCADE' })
+  answers!: Answer[]
 }

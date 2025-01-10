@@ -5,9 +5,15 @@ import { JwtService } from '@nestjs/jwt';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Level } from './entity/level.entity';
 import { ConfigModule } from '@nestjs/config';
+import { School } from 'src/school/entities/school.entity';
+import { StudentProfile } from 'src/profile/entities/student-profile.entity';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { Subject } from 'src/subject/entity/subject.entity';
+import { Bot } from 'src/bot/entities/bot.entity';
+import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Level]), ConfigModule],
+  imports: [SequelizeModule.forFeature([Level, School, StudentProfile, TeacherProfile, Subject, Bot, JoinTeacherSubjectLevel]), ConfigModule],
   controllers: [LevelController],
   providers: [LevelService, JwtService]
 })

@@ -39,4 +39,7 @@ export class UpdateUserDto {
   })
   @IsBoolean()
   isVerified: boolean;
+
+  @IsBoolean()
+  is_verified_by_admin: boolean
 }

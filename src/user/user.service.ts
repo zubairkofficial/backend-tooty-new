@@ -1,5 +1,6 @@
 import { UnauthorizedException, HttpStatus, Logger } from '@nestjs/common';
 import {
+  CreateAdminBySuperAdminDto,
   CreateUserByAdminDto,
   CreateUserDto,
   DeleteUserDto,
@@ -32,6 +33,9 @@ import { unlink } from 'fs/promises';
 import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { Response } from 'express';
+import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
+import { School } from 'src/school/entities/school.entity';
+import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
 
 export class UserService {
   constructor(private readonly logger = new Logger('UserService')) { }
@@ -140,13 +144,14 @@ export class UserService {
   }
 
   async updateUser(updateUserDto: UpdateUserDto, req: any) {
-    const { name, contact, email, id, isVerified } = updateUserDto;
+    const { name, contact, email, id, isVerified, is_verified_by_admin } = updateUserDto;
 
     await User.update({
       email,
       contact,
       name,
-      isVerified
+      isVerified,
+      is_verified_by_admin
     }, {
       where: {
         id: {
@@ -265,54 +270,8 @@ export class UserService {
           }
         }
       }).then(async () => {
-        // const otp = await Otp.findOne({
-        //   where: {
-        //     user_id: {
-        //       [Op.eq]: deleteUserDto.user_id
-        //     }
-        //   }
-        // })
-        // if (otp) {
-        //   await Otp.destroy({
-        //     where: {
-        //       user_id: {
-        //         [Op.eq]: deleteUserDto.user_id
-        //       }
-        //     }
-        //   })
-        // }
-        // const chat = await Chat.findAll({
-        //   where: {
-        //     user_id: {
-        //       [Op.eq]: deleteUserDto.user_id
-        //     }
-        //   }
-        // })
-        // if (chat.length > 0) {
-        //   await Chat.destroy({
-        //     where: {
-        //       user_id: {
-        //         [Op.eq]: deleteUserDto.user_id
-        //       }
-        //     }
-        //   })
-        // }
-        // const refreshToken = await RefreshToken.findOne({
-        //   where: {
-        //     user_id: {
-        //       [Op.eq]: deleteUserDto.user_id
-        //     }
-        //   }
-        // })
-        // if (refreshToken) {
-        //   await RefreshToken.destroy({
-        //     where: {
-        //       user_id: {
-        //         [Op.eq]: deleteUserDto.user_id
-        //       }
-        //     }
-        //   })
-        // }
+
+
 
         await User.destroy({
           where: {
@@ -330,8 +289,82 @@ export class UserService {
       throw new Error("ERROR DELETING USER")
     }
   }
+  async deleteParent(deleteUserDto: DeleteUserDto) {
+    try {
 
-  async createUser(createUserByAdminDto: CreateUserByAdminDto) {
+      await ParentProfile.destroy({
+        where: {
+          user_id: {
+            [Op.eq]: deleteUserDto.user_id
+          }
+        }
+      }).then(async () => {
+
+
+
+        await User.destroy({
+          where: {
+            id: {
+              [Op.eq]: deleteUserDto.user_id
+            }
+          }
+        })
+      })
+      return {
+        statusCode: 200,
+        message: "success deleting parent"
+      }
+    } catch (error) {
+      throw new Error("ERROR DELETING Parent")
+    }
+  }
+
+
+  async createAdmin(createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
+    const existingUser = await User.findOne({
+      where: { email: createAdminBySuperAdminDto.email },
+    });
+    if (existingUser) {
+      return {
+        message: 'Admin Already Exist',
+        statusCode: 1000,
+        user: {
+          isVerified: existingUser.isVerified,
+        },
+      };
+    }
+    const hashedPassword = await bcrypt.hash(createAdminBySuperAdminDto.password, 10);
+
+    const res = await User.create({
+      name: createAdminBySuperAdminDto.name,
+      email: createAdminBySuperAdminDto.email,
+      password: hashedPassword,
+      contact: createAdminBySuperAdminDto.contact,
+      role: createAdminBySuperAdminDto.role,
+      isVerified: true
+    }).then(async (u) => {
+
+      await AdminProfile.create({
+        id: u.id,
+        user_id: u.id,
+        school_id: createAdminBySuperAdminDto.school_id
+      })
+
+      return u
+    });
+    return {
+      message: 'Admin successfully registered.',
+      statusCode: HttpStatus.OK,
+      data: {
+        id: res.id,
+        name: res.name,
+        email: res.email,
+      },
+    };
+  }
+
+
+  async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
     const existingUser = await User.findOne({
       where: { email: createUserByAdminDto.email },
     });
@@ -344,7 +377,7 @@ export class UserService {
         },
       };
     }
-    const hashedPassword = await bcrypt.hash(createUserByAdminDto.password != "" ? createUserByAdminDto.password : "123", 10);
+    const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
 
     const res = await User.create({
       name: createUserByAdminDto.name,
@@ -359,14 +392,24 @@ export class UserService {
           level_id: createUserByAdminDto.level_id,
           user_id: u.id,
           user_roll_no: createUserByAdminDto.user_roll_no,
-          id: u.id
+          id: u.id,
+          school_id: req.user.school_id,
+          parent_id: createUserByAdminDto.parent_id
         })
       } else if (createUserByAdminDto.role == Role.TEACHER) {
         await TeacherProfile.create({
           user_id: u.id,
           id: u.id,
           title: "",
-          level_id: createUserByAdminDto.level_id
+          level_id: createUserByAdminDto.level_id,
+          school_id: req.user.school_id
+        })
+      } else if (createUserByAdminDto.role == Role.PARENT) {
+        await ParentProfile.create({
+          user_id: u.id,
+          id: u.id,
+
+          school_id: req.user.school_id
         })
       }
 
@@ -410,6 +453,7 @@ export class UserService {
     newUser.save().then(async (u) => {
       await StudentProfile.create({
         level_id: null,
+        school_id: null,
         user_id: u.id,
         user_roll_no: "",
         id: u.id
@@ -481,6 +525,7 @@ export class UserService {
     sub: number;
     email: string;
     level_id: number | null;
+    school_id: number | null;
     role: string
   }): Promise<string> {
     const refreshToken = SignRefreshToken(payload);
@@ -514,7 +559,7 @@ export class UserService {
       throw new Error('Token expired or invalid');
     }
 
-    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id ? verifyToken.level_id : null };
+    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id ? verifyToken.level_id : null, school_id: verifyToken?.school_id ? verifyToken.school_id : null };
 
     console.log("payload in refresh access token", payload)
     const accessToken = SignAccessToken(payload);
@@ -571,10 +616,25 @@ export class UserService {
           }
         }
       })
+    } else if (user.role == Role.ADMIN) {
+      profile = await AdminProfile.findOne({
+        where: {
+          user_id: {
+            [Op.eq]: user.id
+          }
+        }
+      })
     }
-    this.logger.log(`USER in db , ${user}`);
+    else if (user.role == Role.PARENT) {
+      profile = await ParentProfile.findOne({
+        where: {
+          user_id: {
+            [Op.eq]: user.id
+          }
+        }
+      })
+    }
 
-    this.logger.log(`USER in db , ${user.password} \n ${password}`);
     // Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -590,7 +650,7 @@ export class UserService {
     })
 
     let refreshToken = ""
-    const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id ? profile.level_id : null };
+    const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id ? profile.level_id : null, school_id: profile?.school_id ? profile.school_id : null };
     if (refresh_token_exist) {
       refreshToken = refresh_token_exist?.refresh_token
       console.log("using old refresh key")
@@ -620,6 +680,7 @@ export class UserService {
           role: user.role,
           isVerified: user.isVerified,
           level_id: profile?.level_id ? profile.level_id : null,
+          school_id: profile?.school_id ? profile.school_id : null
 
         },
       },
@@ -636,13 +697,57 @@ export class UserService {
         // Pagination logic
         const offset = (page - 1) * limit;
         const result = await User.findAndCountAll({
+          include: [
+            {
+              model: StudentProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }],
+              where: {
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
+                }
+              },
+            },
+            {
+              model: TeacherProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }],
+              where: {
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
+                }
+              },
+            },
+            {
+              model: ParentProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }],
+              where: {
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
+                }
+              },
+            }
+          ],
           attributes: {
             exclude: ['password'], // Exclude sensitive information
           },
           where: {
             role: {
               [Op.eq]: role, // Filter users by role
-            },
+            }
           },
           limit,
           offset,
@@ -652,13 +757,57 @@ export class UserService {
       } else {
         // Return all users if page and limit are not provided
         users = await User.findAll({
+          include: [
+            {
+              model: StudentProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }]
+              ,
+              where: {
+                role: {
+                  [Op.eq]: role, // Filter users by role
+                }
+              },
+            },
+            {
+              model: TeacherProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }]
+              ,
+              where: {
+                role: {
+                  [Op.eq]: role, // Filter users by role
+                }
+              },
+            },
+            {
+              model: ParentProfile,
+              required: false,
+              attributes: [],
+              include: [{
+                model: School
+              }]
+              ,
+              where: {
+                role: {
+                  [Op.eq]: role, // Filter users by role
+                }
+              },
+            }
+          ],
           attributes: {
             exclude: ['password'], // Exclude sensitive information
           },
           where: {
             role: {
               [Op.eq]: role, // Filter users by role
-            },
+            }
           },
         });
         total = users.length;
@@ -672,6 +821,7 @@ export class UserService {
         limit: limit || total, // Default to total number of users if not provided
       };
     } catch (error) {
+      console.log("error", error)
       throw new Error('Error fetching users');
     }
   }
@@ -713,6 +863,9 @@ export class UserService {
         attributes: {
           exclude: ["password"]
         },
+        include: [{
+          model: StudentProfile
+        }]
       })
 
       return {

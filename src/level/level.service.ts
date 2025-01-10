@@ -28,47 +28,50 @@ export class LevelService {
 
     async getAllLevels(paginationDto: { page?: number; limit?: number }, req: any) {
         try {
-          const { page, limit } = paginationDto;
-      
-          let levels;
-          let total;
-      
-          if (page && limit) {
-            // Pagination logic
-            if (page < 1 || limit < 1) {
-              throw new Error('Page and limit must be greater than or equal to 1');
+            const { page, limit } = paginationDto;
+
+            let levels;
+            let total;
+
+            if (page && limit) {
+                // Pagination logic
+                if (page < 1 || limit < 1) {
+                    throw new Error('Page and limit must be greater than or equal to 1');
+                }
+
+                const offset = (page - 1) * limit;
+                const result = await Level.findAndCountAll({
+                    limit,
+                    offset,
+                    where: {
+                        school_id: req.user.school_id
+                    },
+                    raw: true,
+                });
+                levels = result.rows;
+                total = result.count;
+            } else {
+                // Return all levels if page and limit are not provided
+                levels = await Level.findAll({
+                    raw: true,
+                });
+                total = levels.length;
             }
-      
-            const offset = (page - 1) * limit;
-            const result = await Level.findAndCountAll({
-              limit,
-              offset,
-              raw: true,
-            });
-            levels = result.rows;
-            total = result.count;
-          } else {
-            // Return all levels if page and limit are not provided
-            levels = await Level.findAll({
-              raw: true,
-            });
-            total = levels.length;
-          }
-      
-          // Use the paginate helper function to structure the response
-          const infoLevel = paginate(levels, total, page || 1, limit || total);
-      
-          return {
-            statusCode: 200,
-            ...infoLevel,
-          };
+
+            // Use the paginate helper function to structure the response
+            const infoLevel = paginate(levels, total, page || 1, limit || total);
+
+            return {
+                statusCode: 200,
+                ...infoLevel,
+            };
         } catch (error) {
-          this.logger.error(`Failed to get all levels: ${error.message}`, error.stack);
-          throw new Error(`Failed to get all levels: ${error.message}`);
+            this.logger.error(`Failed to get all levels: ${error.message}`, error.stack);
+            throw new Error(`Failed to get all levels: ${error.message}`);
         }
-      }
-    
-    
+    }
+
+
 
     async updateLevel(updateLevelDto: UpdateLevelDto, req: any) {
         try {
@@ -101,7 +104,8 @@ export class LevelService {
         try {
             await Level.create({
                 level: createLevelDto.level,
-                description: createLevelDto.description
+                description: createLevelDto.description,
+                school_id: req.user.school_id
             });
 
             return {

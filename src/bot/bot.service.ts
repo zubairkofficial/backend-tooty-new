@@ -3,23 +3,12 @@ import { CreateBotDto, DeleteBotDto, GetBotByLevelSubject, GetBotBySubjectDto, G
 import { Bot } from "./entities/bot.entity";
 import { CreateBotContextDto, DeleteBotContextDto, GetBotContextDto, UpdateBotContextDto } from "./dto/create-Join-bot-data.dto";
 import { Join_BotContextData } from "./entities/join_botContextData.entity";
-import { ContextData } from "src/context_data/entities/contextData.entity";
-import { OpenAIEmbeddings, OpenAI, DallEAPIWrapper, ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate, MessagesPlaceholder, PromptTemplate } from "@langchain/core/prompts";
-// import { createHistoryAwareRetriever } from "langchain/chains/history_aware_retriever";
+import { OpenAIEmbeddings, DallEAPIWrapper, ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
-
-import { pull } from "langchain/hub";
-import { Annotation, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
-// import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
-// import { createRetrievalChain } from "langchain/chains/retrieval";
+import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { tool } from "@langchain/core/tools";
-
-
-
-
-import { query, Request, Response } from "express";
-import sequelize from "sequelize";
+import { Response } from "express";
 import { Sequelize } from "sequelize-typescript";
 import { Chat } from "src/chat/entities/chat.entity";
 import { GenerateImageDto } from "./dto/generateImage.dto";
@@ -28,22 +17,17 @@ import * as fs from 'fs'
 import axios from 'axios'
 import { ChatService } from "src/chat/chat.service";
 import { Op } from "sequelize";
-import { GetBotByLevelDto } from "./dto/get-bot-by-level.dto";
-import { API } from "src/api/entities/api.entity";
 import { ApiService } from "src/api/api.service";
-import { Level } from "src/level/entity/level.entity";
 import { JoinTeacherSubjectLevel } from "src/profile/entities/join-teacher-subject-level.entity";
 import { TeacherProfile } from "src/profile/entities/teacher-profile.entity";
-import { AdminProfile } from "src/profile/entities/admin-profile.entity";
-import { error } from "console";
-import * as similarity from 'cosine-similarity'
 import { Pool, PoolConfig } from "pg";
 import { DistanceStrategy, PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 import { AIMessage, BaseMessage, HumanMessage, isAIMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
-import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { z } from "zod";
-import { measureMemory } from "vm";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
+import { File } from "src/context_data/entities/file.entity";
+import { School } from "src/school/entities/school.entity";
 
 const retrieveSchema = z.object({ query: z.string() });
 
@@ -82,15 +66,9 @@ export class BotService {
             if (!bot) {
                 throw new Error("No bot with this id exist")
             }
-
-
-            const api = await AdminProfile.findOne({
+            const api = await SuperAdminProfile.findOne({
                 attributes: ["dalle"]
             })
-
-
-
-
             if (!api) {
                 throw new Error("unable to find api key")
             }
@@ -187,42 +165,32 @@ export class BotService {
         }
     }
 
-
-
-
     async queryBot(queryBot: QueryBot, req: any) {
         console.log("Data from message:", queryBot);
         let api_key = "";
 
-
-
-
-
         try {
             // Fetch the bot by ID
-            const bot = await Bot.findByPk(queryBot.bot_id);
+            const bot = await Bot.findByPk(queryBot.bot_id, {
+                include: [{
+                    model: File,
+                    attributes: ["id"]
+                }]
+            });
             console.log("Bot in bot:", bot);
 
             if (!bot) {
                 throw new Error("No bot with this ID exists.");
             }
 
-            // Fetch files associated with the bot
-            const bot_files = await Join_BotContextData.findAll({
-                attributes: ["file_id"],
-                where: {
-                    bot_id: {
-                        [Op.eq]: bot.id,
-                    },
-                },
-            });
 
-            if (bot_files.length === 0) {
+
+            if (bot.files.length === 0) {
                 throw new Error("No files are attached to this bot.");
             }
 
             // Fetch the API key from the admin profile
-            const api = await AdminProfile.findOne({
+            const api = await SuperAdminProfile.findOne({
                 attributes: ["openai", "master_prompt"],
             });
 
@@ -279,19 +247,15 @@ export class BotService {
 
                 await checkpointer.setup();
 
-                // const graph = createReactAgent({
-                //     tools: [getWeather],
-                //     llm: new ChatOpenAI({
-                //       model: "gpt-4o-mini",
-                //     }),
-                //     checkpointSaver: checkpointer,
-                //   });
-                //   const config = { configurable: { thread_id: "1" } };
 
                 /////////////////
                 const retrieve = tool(
                     async ({ query }) => {
-                        const retrievedDocs = await vectorStore.similaritySearch(query, 2);
+                        const retrievedDocs = await vectorStore.similaritySearch(query, 20, {
+                            "file_id": {
+                                "$in": bot.files.map(file => file.id)
+                            }
+                        });
                         const serialized = retrievedDocs
                             .map(
                                 (doc) => `Source: ${doc.metadata.source}\nContent: ${doc.pageContent}`
@@ -387,7 +351,7 @@ export class BotService {
 
                 // Initialize the OpenAI model
                 const llm = new ChatOpenAI({
-                    model: bot?.ai_model || "gpt-3.5-turbo",
+                    model: bot?.ai_model,
                     temperature: 0,
                     maxTokens: 1000,
                     timeout: 15000,
@@ -545,23 +509,37 @@ export class BotService {
         });
         const client = await pool.connect();
         try {
-            const query1 = `DELETE FROM checkpoints WHERE thread_id LIKE  $1`;
-            const query2 = `DELETE FROM checkpoint_writes WHERE thread_id LIKE  $1`;
-            // const query3 = `DELETE FROM checkpoint_migrations WHERE thread_id LIKE  $1`;
-            const query4 = `DELETE FROM checkpoint_blobs WHERE thread_id LIKE  $1`;
+            const tables = [
+                'checkpoints',
+                'checkpoint_writes',
+                // 'checkpoint_migrations',
+                'checkpoint_blobs',
+            ];
 
             const params = [`${id}-%`];
 
-            await client.query(query1, params);
-            await client.query(query2, params);
-            // await client.query(query3, params);
-            await client.query(query4, params);
+            for (const table of tables) {
+                // Check if the table exists in the database
+                const tableExistsQuery = `
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = $1
+                    ) AS table_exists;
+                `;
+                const result = await client.query(tableExistsQuery, [table]);
 
+                if (result.rows[0].table_exists) {
+                    // If the table exists, delete records
+                    const deleteQuery = `DELETE FROM ${table} WHERE thread_id LIKE $1`;
+                    await client.query(deleteQuery, params);
+                }
+            }
         } catch (error) {
-            console.log("chat his", error)
-            client.release()
-            throw new Error('Failed Deleting Chat History')
+            console.log("chat history deletion error", error);
+            client.release();
+            throw new Error('Failed Deleting Chat History');
         }
+
     }
 
 
@@ -603,6 +581,12 @@ export class BotService {
                 subject_id: {
                     [Op.eq]: Number(createBotDto.subject_id)
                 },
+                school_id: {
+                    [Op.eq]: Number(req.user.school_id)
+                },
+                deletedAt: {
+                    [Op.eq]: null
+                }
             }
         })
         if (bot_already_exist) {
@@ -619,6 +603,7 @@ export class BotService {
                 bot_image_url: `${image.filename}`,
                 voice_model: createBotDto.voice_model,
                 subject_id: Number(createBotDto.subject_id),
+                school_id: req.user.school_id,
                 display_name: createBotDto.display_name
             }).then(async (bot) => {
                 await Join_BotContextData.create({
@@ -626,7 +611,6 @@ export class BotService {
                     file_id: Number(createBotDto.file_id)
                 })
 
-                return
             })
             res.status(HttpStatus.OK).send({
                 statusCode: 200,
@@ -634,6 +618,7 @@ export class BotService {
             })
             return
         } catch (error) {
+            console.log(error)
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ error: "Error creating bot in DB" })
             return
         }
@@ -764,6 +749,9 @@ export class BotService {
                 where: {
                     level_id: {
                         [Op.eq]: req?.user.level_id
+                    },
+                    school_id: {
+                        [Op.eq]: req?.user.school_id
                     }
                 }
             });
@@ -825,6 +813,11 @@ export class BotService {
                                     [Op.eq]: level_id,
                                 },
                             },
+                            {
+                                school_id: {
+                                    [Op.eq]: req.user.school_id,
+                                },
+                            },
                         ],
                     })),
                 },
@@ -849,7 +842,38 @@ export class BotService {
             throw new Error("Error fetching bots from the database");
         }
     }
-    async getAllBotsByAdmin(req: any, page: number = 1, limit: number = 10) {
+    async getAllBots(req: any, page: number = 1, limit: number = 10) {
+        try {
+            // Calculate the offset based on the page and limit
+            const offset = (page - 1) * limit;
+
+            // Fetch paginated data from the database
+            const { rows: bots, count: total } = await Bot.findAndCountAll({
+                include: [{
+                    model: School
+                }],
+                limit, // Number of records to fetch
+                offset, // Starting point for the records
+                order: [['createdAt', 'DESC']], // Optional: Sort by creation date
+            });
+
+            // Calculate the total number of pages
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                statusCode: 200,
+                message: "Bots fetched successfully",
+                bots, // Paginated bots
+                total, // Total number of bots
+                page, // Current page
+                totalPages, // Total number of pages
+            };
+        } catch (error) {
+            this.logger.error("Error fetching bots: ", error.message);
+            throw new Error("Error fetching bots from the database");
+        }
+    }
+    async getAllBotsBySchool(req: any, page: number = 1, limit: number = 10) {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
@@ -857,7 +881,9 @@ export class BotService {
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
                 where: {
-                    user_id: req.user.sub, // Filter by admin's user ID
+                    school_id: {
+                        [Op.eq]: req.user.school_id
+                    }
                 },
                 limit, // Number of records to fetch
                 offset, // Starting point for the records
@@ -899,6 +925,9 @@ export class BotService {
                         },
                         level_id: {
                             [Op.eq]: teacher.level_id
+                        },
+                        school_id: {
+                            [Op.eq]: req.user.school_id
                         }
                     }
                 })
@@ -927,7 +956,7 @@ export class BotService {
         }
     }
 
-    async getBotByLevelSubject(getBotByLevelSubject: GetBotByLevelSubject) {
+    async getBotByLevelSubject(getBotByLevelSubject: GetBotByLevelSubject, req: any) {
         try {
             const bot = await Bot.findOne({
                 where: {
@@ -937,6 +966,9 @@ export class BotService {
                     level_id: {
                         [Op.eq]: getBotByLevelSubject.level_id
                     },
+                    school_id: {
+                        [Op.eq]: req.user.school_id
+                    }
                 }
             })
 

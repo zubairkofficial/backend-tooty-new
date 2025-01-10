@@ -1,15 +1,8 @@
 
 import { Op } from 'sequelize';
-import path from 'path'
-import fs from 'fs'
-import axios from 'axios'
 import { CreateChatDto } from './dto/create-chat.dto';
-
 import { Chat } from './entities/chat.entity';
-
 import { BotService } from 'src/bot/bot.service';
-
-import { QueryBot } from 'src/bot/dto/create-bot.dto';
 import { FetchChatDto, FetchChatHistoryDto } from './dto/fetch-chat.dto';
 
 export class ChatService {

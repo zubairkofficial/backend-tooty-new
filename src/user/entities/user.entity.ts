@@ -9,13 +9,13 @@ import {
   Table,
 } from 'sequelize-typescript';
 import { RefreshToken } from './refreshToken.entity';
-// import { Bot } from '../../bot/entities/bot.entity';
-import { File } from 'src/context_data/entities/file.entity';
 import { Role } from 'src/utils/roles.enum';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
-import { API } from 'src/api/entities/api.entity';
-import { Bot } from 'src/bot/entities/bot.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
+import { SuperAdminProfile } from 'src/profile/entities/super-admin.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
+import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
 
 @Table({
   tableName: 'users',
@@ -43,7 +43,7 @@ export class User extends Model {
 
   @Column({
     type: DataType.STRING,
-   
+
   })
   user_image_url: string;
 
@@ -69,21 +69,31 @@ export class User extends Model {
   })
   isVerified: boolean;
 
-  @HasOne(() => RefreshToken)
+  @Default(false)
+  @Column({
+    type: DataType.BOOLEAN,
+  })
+  is_verified_by_admin: boolean;
+
+  @HasOne(() => RefreshToken, { onDelete: 'CASCADE' })
   refresh_token!: RefreshToken;
 
-  @HasOne(() => StudentProfile)
+  @HasOne(() => StudentProfile, { onDelete: 'CASCADE' })
   student_profile: StudentProfile;
 
-  @HasOne(() => TeacherProfile)
+  @HasOne(() => ParentProfile, { onDelete: 'CASCADE' })
+  parent_profile: ParentProfile;
+
+  @HasOne(() => TeacherProfile, { onDelete: 'CASCADE' })
   teacher_profile: TeacherProfile
 
-  @HasMany(() => API)
-  api!: API
+  @HasOne(() => AdminProfile, { onDelete: 'CASCADE' })
+  admin_profile: AdminProfile
 
-  @HasMany(() => Bot)
-  bots!: Bot[]
+  @HasOne(() => SuperAdminProfile)
+  super_admin_profile: SuperAdminProfile
 
-  @HasMany(() => File)
-  files!: File[]
+  @HasMany(() => Chat, { onDelete: 'CASCADE' })
+  chats!: Chat[]
+
 }
