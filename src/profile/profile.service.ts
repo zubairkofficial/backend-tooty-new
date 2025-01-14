@@ -420,11 +420,11 @@ export class ProfileService {
     async getChildren(req: any) {
         try {
 
-            const data = await ParentProfile.findAll({
+            const data = await StudentProfile.findAll({
 
                 where: {
                    
-                    id: {
+                    parent_id: {
                         [Op.eq]: req.user.sub,
                     },
                 },
