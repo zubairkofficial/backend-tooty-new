@@ -365,67 +365,82 @@ export class UserService {
 
 
   async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
-    const existingUser = await User.findOne({
-      where: { email: createUserByAdminDto.email },
-    });
-    if (existingUser) {
+    try {
+      // Check if the user already exists
+      const existingUser = await User.findOne({
+        where: { email: createUserByAdminDto.email },
+      });
+      if (existingUser) {
+        return {
+          message: 'User already exists',
+          statusCode: 1000,
+          user: {
+            isVerified: existingUser.isVerified,
+          },
+        };
+      }
+  
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
+  
+      // Create the user and associated profile based on the role
+      const res = await User.create({
+        name: createUserByAdminDto.name,
+        email: createUserByAdminDto.email,
+        password: hashedPassword,
+        contact: createUserByAdminDto.contact,
+        role: createUserByAdminDto.role,
+        isVerified: true,
+      }).then(async (u) => {
+        if (createUserByAdminDto.role == Role.USER) {
+          await StudentProfile.create({
+            level_id: createUserByAdminDto.level_id,
+            user_id: u.id,
+            user_roll_no: createUserByAdminDto.user_roll_no,
+            id: u.id,
+            school_id: req.user.school_id,
+            parent_id: createUserByAdminDto.parent_id,
+          });
+        } else if (createUserByAdminDto.role == Role.TEACHER) {
+          await TeacherProfile.create({
+            user_id: u.id,
+            id: u.id,
+            title: "",
+            level_id: createUserByAdminDto.level_id,
+            school_id: req.user.school_id,
+          });
+        } else if (createUserByAdminDto.role == Role.PARENT) {
+          await ParentProfile.create({
+            user_id: u.id,
+            id: u.id,
+            school_id: req.user.school_id,
+          });
+        }
+        return u;
+      });
+  
+      // Return success response
       return {
-        message: 'User Already Exist',
-        statusCode: 1000,
-        user: {
-          isVerified: existingUser.isVerified,
+        message: 'User successfully registered.',
+        statusCode: HttpStatus.OK,
+        data: {
+          id: res.id,
+          name: res.name,
+          email: res.email,
         },
       };
+    } catch (error) {
+      // Handle errors and log them if necessary
+      console.error('Error in createUser:', error);
+  
+      return {
+        message: 'An error occurred while creating the user.',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: error.message || 'Internal Server Error',
+      };
     }
-    const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
-
-    const res = await User.create({
-      name: createUserByAdminDto.name,
-      email: createUserByAdminDto.email,
-      password: hashedPassword,
-      contact: createUserByAdminDto.contact,
-      role: createUserByAdminDto.role,
-      isVerified: true
-    }).then(async (u) => {
-      if (createUserByAdminDto.role == Role.USER) {
-        await StudentProfile.create({
-          level_id: createUserByAdminDto.level_id,
-          user_id: u.id,
-          user_roll_no: createUserByAdminDto.user_roll_no,
-          id: u.id,
-          school_id: req.user.school_id,
-          parent_id: createUserByAdminDto.parent_id
-        })
-      } else if (createUserByAdminDto.role == Role.TEACHER) {
-        await TeacherProfile.create({
-          user_id: u.id,
-          id: u.id,
-          title: "",
-          level_id: createUserByAdminDto.level_id,
-          school_id: req.user.school_id
-        })
-      } else if (createUserByAdminDto.role == Role.PARENT) {
-        await ParentProfile.create({
-          user_id: u.id,
-          id: u.id,
-
-          school_id: req.user.school_id
-        })
-      }
-
-      return u
-    });
-    return {
-      message: 'create user successfully registered.',
-      statusCode: HttpStatus.OK,
-      data: {
-        id: res.id,
-        name: res.name,
-        email: res.email,
-      },
-    };
   }
-
+  
 
 
   async signup(createUserDto: CreateUserDto, res: Response) {

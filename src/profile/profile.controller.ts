@@ -26,6 +26,15 @@ export class ProfileController {
   async getChildren(@Req() req: any) {
     return this.profileServices.getChildren(req);
   }
+ 
+  @Get('get-children/:child_id')
+  @Roles(Role.PARENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getChildrenById(@Req() req: any,@Param() params) {
+    return this.profileServices.getChildrenById(params,req);
+  }
 
   //Super admin management
 

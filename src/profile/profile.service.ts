@@ -13,6 +13,13 @@ import { Subject } from 'src/subject/entity/subject.entity';
 import { Role } from 'src/utils/roles.enum';
 import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from './entities/parent-profile.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
+import { RefreshToken } from 'src/user/entities/refreshToken.entity';
+import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
+import { Level } from 'src/level/entity/level.entity';
+import { HttpStatus, HttpException } from '@nestjs/common';
+import { Quiz } from 'src/quiz/entities/quiz.entity';
+import { Answer } from 'src/answer/entities/answer.entity';
 
 
 export class ProfileService {
@@ -413,20 +420,25 @@ export class ProfileService {
     async getChildren(req: any) {
         try {
 
-            const data = await User.findAll({
+            const data = await ParentProfile.findAll({
 
                 where: {
-                    level_id: {
-                        [Op.eq]: req.user.level_id
+                   
+                    id: {
+                        [Op.eq]: req.user.sub,
                     },
-                    school_id: {
-                        [Op.eq]: req.user.school_id
+                },
+                include: [
+                    {
+                        model: User, // Assuming a User model exists
+                        as: 'user', // Alias for the relation
                     },
-                    parent_id: {
-                        [Op.eq]: req.user.sub
-                    }
-                }
-            })
+                    {
+                        model: School, // Assuming a School model exists
+                        as: 'school', // Alias for the relation
+                    },
+                ],
+            });
             return {
                 statusCode: 200,
                 data: data
@@ -434,6 +446,74 @@ export class ProfileService {
         } catch (error) {
             throw new Error("Error getting students by level")
         }
+    }
+
+    async getChildrenById(params: any,req) {
+        try {
+            console.log(`Fetching student profile with relations for student_id: ${params.child_id }`);
+
+            // Validate input
+            if (!params.child_id  || isNaN(params.child_id )) {
+                throw new Error('Invalid params.child_id  provided');
+            }
+
+            const studentProfile = await StudentProfile.findOne({
+                where: {
+                    id: params.child_id ,
+                },
+                include: [
+                    {
+                        model: School,
+                        as: 'school', // Ensure this matches the alias in the model
+                    },
+                    {
+                        model: Level,
+                        as: 'level', // Ensure this matches the alias in the model
+                    },
+                    {
+                        model: User,
+                        as: 'user', // Ensure this matches the alias in the model
+                    },
+                    
+                    {
+                        model: QuizAttempt,
+                        as: 'attempted_quizes',
+                        include: [
+                            {
+                                model: Quiz,
+                                as: 'quiz', // Include quiz details
+                            },
+                            {
+                                model: Answer,
+                                as: 'answers', // Include quiz details
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            if (!studentProfile) {
+                throw new Error(`No student profile found for params.child_id : ${params.child_id }`);
+            }
+
+            console.log('Fetched student profile:', studentProfile);
+
+            return {
+                statusCode: HttpStatus.OK,
+                data: studentProfile,
+            };
+        } catch (error) {
+            console.error(`Error fetching student profile with relations: ${error.message}`);
+            throw new HttpException(
+                {
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: 'Error getting students by level',
+                    details: error.message,
+                },
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    
     }
     async getStudentsByLevel(req: any) {
         try {
