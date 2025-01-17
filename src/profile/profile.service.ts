@@ -299,8 +299,8 @@ export class ProfileService {
 
     async createJoinTeacherSubjectLevel(createJoinTeacherSubjectLevelDto: CreateJoinTeacherSubjectLevel, req: any) {
         try {
-
-            createJoinTeacherSubjectLevelDto.subject_id.forEach(async (id) => {
+            // Using for...of with async/await to wait for each iteration
+            for (const id of createJoinTeacherSubjectLevelDto.subject_id) {
                 const join_already_exist = await JoinTeacherSubjectLevel.findOne({
                     where: {
                         level_id: {
@@ -313,30 +313,29 @@ export class ProfileService {
                             [Op.eq]: createJoinTeacherSubjectLevelDto.teacher_id
                         },
                     }
-                })
-
-                if (!join_already_exist) {
-                    await JoinTeacherSubjectLevel.create({
-                        level_id: createJoinTeacherSubjectLevelDto.level_id,
-                        subject_id: Number(id),
-                        teacher_id: createJoinTeacherSubjectLevelDto.teacher_id
-                    })
-
+                });
+    
+                if (join_already_exist) {
+                    throw new Error("Subject already assigned to the teacher at this level.");
                 }
-
-            })
-
+    
+                // Create the join for teacher and subject
+                await JoinTeacherSubjectLevel.create({
+                    level_id: createJoinTeacherSubjectLevelDto.level_id,
+                    subject_id: Number(id),
+                    teacher_id: createJoinTeacherSubjectLevelDto.teacher_id
+                });
+            }
+    
             return {
                 statusCode: 200,
-                message: "teacher level subject join created successfully",
-
-            }
-
+                message: "Teacher-level-subject join created successfully.",
+            };
         } catch (error) {
-            throw new Error("Error creating teacher level subject join")
+            throw new Error(error.original.detail || "Error creating teacher-level-subject join");
         }
     }
-
+    
 
     async getTeacherProfile(getTeacherProfile: GetTeacherProfileDto, req: any) {
         try {
@@ -363,7 +362,7 @@ export class ProfileService {
 
         } catch (error) {
             console.log(error)
-            throw new Error('error getting profile')
+            throw new Error(error.message)
         }
     }
 

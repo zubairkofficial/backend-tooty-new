@@ -28,6 +28,7 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
 import { File } from "src/context_data/entities/file.entity";
 import { School } from "src/school/entities/school.entity";
+import { Role } from "src/utils/roles.enum";
 
 const retrieveSchema = z.object({ query: z.string() });
 
@@ -771,7 +772,7 @@ export class BotService {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
-
+    
             // Fetch the teacher's profile
             const teacher_profile = await TeacherProfile.findOne({
                 where: {
@@ -780,11 +781,11 @@ export class BotService {
                     },
                 },
             });
-
+    
             if (!teacher_profile) {
                 throw new Error("Teacher profile not found");
             }
-
+    
             // Fetch the teacher's subject and level data
             const teacher_data = await JoinTeacherSubjectLevel.findAll({
                 where: {
@@ -793,11 +794,11 @@ export class BotService {
                     },
                 },
             });
-
+    
             if (teacher_data.length === 0) {
                 throw new Error("No subjects or levels assigned to the teacher");
             }
-
+    
             // Fetch paginated bots based on the teacher's subjects and levels
             const { rows: bots, count: total } = await Bot.findAndCountAll({
                 where: {
@@ -825,10 +826,10 @@ export class BotService {
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
             });
-
+    
             // Calculate the total number of pages
             const totalPages = Math.ceil(total / limit);
-
+    
             return {
                 statusCode: 200,
                 message: "Bots fetched successfully",
@@ -842,24 +843,31 @@ export class BotService {
             throw new Error("Error fetching bots from the database");
         }
     }
+    
     async getAllBots(req: any, page: number = 1, limit: number = 10) {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
-
+    
+            // Determine the `where` condition based on the user's role
+            const whereCondition = req.user.role === Role.SUPER_ADMIN 
+                ? {} // No condition for SUPERADMIN, fetch all bots
+                : { school_id: req.user.school_id }; // Restrict to user's school_id
+    
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
+                where: whereCondition, // Apply the dynamic condition
                 include: [{
-                    model: School
+                    model: School, // Include related School model data
                 }],
                 limit, // Number of records to fetch
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
             });
-
+    
             // Calculate the total number of pages
             const totalPages = Math.ceil(total / limit);
-
+    
             return {
                 statusCode: 200,
                 message: "Bots fetched successfully",
@@ -873,11 +881,14 @@ export class BotService {
             throw new Error("Error fetching bots from the database");
         }
     }
+    
+    
+
     async getAllBotsBySchool(req: any, page: number = 1, limit: number = 10) {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
-
+    
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
                 where: {
@@ -889,10 +900,10 @@ export class BotService {
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
             });
-
+    
             // Calculate the total number of pages
             const totalPages = Math.ceil(total / limit);
-
+    
             return {
                 statusCode: 200,
                 message: "Bots fetched successfully",
@@ -906,6 +917,7 @@ export class BotService {
             throw new Error("Error fetching bots from the database");
         }
     }
+    
 
 
     async getBotBySubject(getBotDto: GetBotBySubjectDto, req: any) {

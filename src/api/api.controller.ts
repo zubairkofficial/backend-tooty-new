@@ -19,7 +19,7 @@ export class ApiController {
   constructor(private readonly apiServices: ApiService) {}
 
   @Post('get-voice-model')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.USER,Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get voice models based on request' })
   @ApiBody({ type: GetVoiceModelDto })
@@ -42,7 +42,7 @@ export class ApiController {
   }
 
   @Get('get-deepgram-api')
-  @Roles(Role.USER, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.USER, Role.ADMIN, Role.TEACHER,Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Deepgram API information' })
   @ApiResponse({ status: 200, description: 'Deepgram API fetched successfully.' })

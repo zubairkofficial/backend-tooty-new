@@ -53,10 +53,14 @@ export class LevelService {
             } else {
                 // Return all levels if page and limit are not provided
                 levels = await Level.findAll({
+                    where: {
+                        school_id: req.user.school_id
+                    },
                     raw: true,
                 });
                 total = levels.length;
             }
+            
 
             // Use the paginate helper function to structure the response
             const infoLevel = paginate(levels, total, page || 1, limit || total);

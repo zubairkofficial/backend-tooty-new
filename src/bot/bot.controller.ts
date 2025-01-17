@@ -151,8 +151,8 @@ export class BotController {
     @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
     async getAllBotsByTeacher(
         @Req() req: any,
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number ,
     ) {
         return this.botService.getAllBotsByTeacher(req, page, limit);
     }
@@ -166,8 +166,8 @@ export class BotController {
     @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
     async getAllBots(
         @Req() req: any,
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
+        @Query('page') page?: number ,
+        @Query('limit') limit?: number ,
     ) {
         return this.botService.getAllBots(req, page, limit);
     }
@@ -181,8 +181,8 @@ export class BotController {
     @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
     async getAllBotsByAdmin(
         @Req() req: any,
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
+        @Query('page') page?: number ,
+        @Query('limit') limit?: number,
     ) {
         return this.botService.getAllBotsBySchool(req, page, limit);
     }

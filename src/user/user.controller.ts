@@ -43,7 +43,7 @@ export class UserController {
   constructor(private readonly userService: UserService) { }
 
   @Put('update-avatar')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(FileInterceptor('avatar', multerStorageConfig)) // Ensure property matches Swagger
   @ApiOperation({ summary: 'Update user avatar' })
@@ -67,12 +67,14 @@ export class UserController {
     if (!avatar) {
       throw new BadRequestException('No image uploaded');
     }
-    return this.userService.updateAvatar(avatar, req.user);
+  
+    const result = await this.userService.updateAvatar(avatar, req);
+    return result;
   }
 
 
   @Post('get-user')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN,Role.SUPER_ADMIN,Role.PARENT,Role.TEACHER,Role.USER)
   @ApiBearerAuth('access-token') // JWT Bearer authentication
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -213,7 +215,7 @@ export class UserController {
   }
 
   @Put('update-user')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN,Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
 

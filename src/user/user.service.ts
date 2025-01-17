@@ -144,27 +144,50 @@ export class UserService {
   }
 
   async updateUser(updateUserDto: UpdateUserDto, req: any) {
-    const { name, contact, email, id, isVerified, is_verified_by_admin } = updateUserDto;
+    const { id, name, contact, email, isVerified, is_verified_by_admin, oldPassword, newPassword } = updateUserDto;
 
-    await User.update({
-      email,
-      contact,
-      name,
-      isVerified,
-      is_verified_by_admin
-    }, {
-      where: {
-        id: {
-          [Op.eq]: id
-        }
+    // Fetch the user from the database
+    const user = await User.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Handle password update if oldPassword and newPassword are provided
+    if (oldPassword && newPassword) {
+      // Validate the old password
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        throw new Error('Old password is incorrect');
       }
-    })
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      await user.save(); // Save the updated password
+    }
+
+    // Update profile fields
+    const updatedFields = {
+      name: name || user.name,
+      contact: contact || user.contact,
+      email: email || user.email,
+      isVerified: isVerified !== undefined ? isVerified : user.isVerified,
+      is_verified_by_admin: is_verified_by_admin !== undefined ? is_verified_by_admin : user.is_verified_by_admin,
+    };
+
+    await User.update(updatedFields, {
+      where: { id },
+    });
 
     return {
       message: 'Successfully updated the user',
       statusCode: HttpStatus.OK,
     };
   }
+
 
   async updatePassword(createForgotDto: UpdatePasswordDto, req: any) {
     const { password, otp, email } = createForgotDto;
@@ -845,30 +868,41 @@ export class UserService {
   async updateAvatar(image: Express.Multer.File, req: any) {
     try {
       const user = await User.findByPk(req.sub, {
-        attributes: ["user_image_url"]
-      })
-
+        attributes: ["user_image_url"],
+      });
+  
+      // Delete the old avatar if it exists
       if (user?.user_image_url) {
         await unlink(user.user_image_url);
       }
-
-      await User.update({
-        user_image_url: image.path
-      }, {
-        where: {
-          id: {
-            [Op.eq]: req.sub
-          }
+  
+      // Update the user's avatar URL in the database
+     
+      // Construct the public URL for the avatar
+      const avatarUrl = `${req.protocol}://${req.get('host')}/images/${image.filename}`;
+      await User.update(
+        {
+          user_image_url: avatarUrl, // Store the local file path
+        },
+        {
+          where: {
+            id: {
+              [Op.eq]: req.user.sub,
+            },
+          },
         }
-      })
-
+      );
+  
       return {
         statusCode: 200,
-        message: "success updating avatar"
-      }
-
+        message: "Avatar updated successfully",
+        data: {
+          avatarUrl, // Return the public URL
+        },
+      };
     } catch (error) {
-      throw new Error("Error updating avatar")
+      console.error("Error updating avatar:", error);
+      throw new Error("Error updating avatar");
     }
   }
 

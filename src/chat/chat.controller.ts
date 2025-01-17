@@ -55,7 +55,7 @@ export class ChatController {
         status: 500,
         description: 'Internal server error',
     })
-    @Roles(Role.USER, Role.ADMIN)
+    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN,Role.TEACHER)
     @UseGuards(JwtAuthGuard, RolesGuard)
     fetchChat(@Body() fetchChatDto: FetchChatDto, @Req() req: any) {
         return this.chatSerivce.fetchChat(fetchChatDto, req);
@@ -79,7 +79,7 @@ export class ChatController {
         description: 'The message and chat session details',
         type: CreateChatDto,
     })
-    @Roles(Role.USER, Role.ADMIN)
+    @Roles(Role.USER, Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     sendMessage(@Body() createChatDto: CreateChatDto, @Req() req: any) {
         return this.chatSerivce.sendMessage(createChatDto, req);

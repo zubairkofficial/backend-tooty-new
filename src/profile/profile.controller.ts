@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';  // Swagger decorators
 import { UpdateStudentProfileDto } from './dto/update-profile.dto';
 import { ProfileService } from './profile.service';
@@ -102,10 +102,24 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Create Teacher-Subject-Level Join' })
   @ApiResponse({ status: 201, description: 'Teacher-Subject-Level join created.' })
-  async createJoinTeacherSubjectLevel(@Body() createJoinTeacherSubjectLevelDto: CreateJoinTeacherSubjectLevel, @Req() req: any) {
-    return this.profileServices.createJoinTeacherSubjectLevel(createJoinTeacherSubjectLevelDto, req);
+  async createJoinTeacherSubjectLevel(
+    @Body() createJoinTeacherSubjectLevelDto: CreateJoinTeacherSubjectLevel,
+    @Req() req: any
+  ) {
+    try {
+      // Call the service method
+      const response = await this.profileServices.createJoinTeacherSubjectLevel(createJoinTeacherSubjectLevelDto, req);
+      return response; // Return the successful response
+    } catch (error) {
+      // Handle any errors that occur
+      console.error(error);
+      return {
+        statusCode: 500,
+        message: error.message || 'An error occurred while creating the teacher-subject-level join.',
+      };
+    }
   }
-
+  
   @Delete('delete-join-teacher-subject-level')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -138,8 +152,24 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Teacher Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved teacher profile.' })
-  async getTeacherProfile(@Body() getTeacherProfile: GetTeacherProfileDto, @Req() req: any) {
-    return this.profileServices.getTeacherProfile(getTeacherProfile, req);
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async getTeacherProfile(
+    @Body() getTeacherProfile: GetTeacherProfileDto,
+    @Req() req: any,
+  ) {
+    try {
+      const profile = await this.profileServices.getTeacherProfile(getTeacherProfile, req);
+      return profile;
+    } catch (error) {
+      console.error('Error fetching teacher profile:', error.message);
+  
+      // Generic error response
+      throw new HttpException(
+        { message: 'Failed to retrieve teacher profile.', error: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   // Students Management

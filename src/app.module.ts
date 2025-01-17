@@ -41,12 +41,13 @@ import { SchoolModule } from './school/school.module';
 import { School } from './school/entities/school.entity';
 import { SuperAdminProfile } from './profile/entities/super-admin.entity';
 import { ParentProfile } from './profile/entities/parent-profile.entity';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'images'), // Path to the static files
-      serveRoot: '/static/images', // Serve files under the `/static` URL path (optional)
+      rootPath: join(__dirname, '..', 'images'), // Path to your images directory
+      serveRoot: '/images', // URL prefix for accessing images
     }),
     ConfigModule.forRoot({
       isGlobal: true,
@@ -92,6 +93,7 @@ import { ParentProfile } from './profile/entities/parent-profile.entity';
     OptionModule,
     AnswerModule,
     SchoolModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
