@@ -31,13 +31,14 @@ export class Level extends Model {
     })
     id: number;
 
-    @Unique
+    @Unique('unique_level')
     @Column({
         type: DataType.STRING,
     })
     level: string;
 
     @ForeignKey(() => School)
+    @Unique('unique_level')
     @Column({
         type: DataType.INTEGER
     })
@@ -61,11 +62,11 @@ export class Level extends Model {
     bots!: Bot[]
 
 
-    @BelongsToMany(() => TeacherProfile, () => JoinTeacherSubjectLevel)
-    teacher_join_table!: TeacherProfile[]
+    // @BelongsToMany(() => TeacherProfile, () => JoinTeacherSubjectLevel)
+    // teacher_join_table!: TeacherProfile[]
 
-    @BelongsToMany(() => Subject, () => JoinTeacherSubjectLevel)
-    subject_join_table!: Subject[]
+    // @BelongsToMany(() => Subject, () => JoinTeacherSubjectLevel)
+    // subject_join_table!: Subject[]
 
 
     @BelongsTo(() => School, { onDelete: 'CASCADE' })

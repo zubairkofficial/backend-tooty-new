@@ -8,7 +8,7 @@ export class CreateSchoolDto {
   name: string;
 
   @IsString()
-  @IsOptional()
+  @MinLength(10)
   @MaxLength(500)
   description?: string;
 }
@@ -22,6 +22,7 @@ export class UpdateSchoolDto {
 
   @IsString()
   @IsOptional()
+  @MinLength(10)
   @MaxLength(500)
   description?: string;
 }

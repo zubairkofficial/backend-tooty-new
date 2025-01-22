@@ -1,13 +1,14 @@
 // src/dto/Option.dto.ts
-import { IsNotEmpty, IsBoolean, IsNumber, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 
 export class EditOptionDto {
   @IsNumber()
+  @IsOptional()
   id: number;
 
   @IsOptional()
-  @IsNotEmpty()
+  
   text?: string;
 
   @IsOptional()

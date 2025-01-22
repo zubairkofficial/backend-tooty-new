@@ -1,4 +1,4 @@
-import { UnauthorizedException, HttpStatus, Logger } from '@nestjs/common';
+import { UnauthorizedException, HttpStatus, Logger, HttpException } from '@nestjs/common';
 import {
   CreateAdminBySuperAdminDto,
   CreateUserByAdminDto,
@@ -26,7 +26,7 @@ import { Role } from 'src/utils/roles.enum';
 
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { Op } from 'sequelize';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto, UpdateUserDto } from './dto/update-user.dto';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { Multer } from 'multer';
 import { unlink } from 'fs/promises';
@@ -38,7 +38,9 @@ import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
 
 export class UserService {
-  constructor(private readonly logger = new Logger('UserService')) { }
+  constructor(private readonly logger = new Logger('UserService'),
+
+  ) { }
 
 
   private generateOtp(): string {
@@ -50,6 +52,16 @@ export class UserService {
     const otp = this.generateOtp();
 
     try {
+      const user = await User.findOne({
+        where: {
+          email: {
+            [Op.eq]: sendOtpDto.email
+          }
+        }
+      })
+      if (!user) {
+        throw new Error("User Does Not Exist")
+      }
       // Check if an OTP already exists for the email
       const existingOtp = await Otp.findOne({
         where: { email: sendOtpDto.email },
@@ -143,85 +155,167 @@ export class UserService {
     };
   }
 
-  async updateUser(updateUserDto: UpdateUserDto, req: any) {
-    const { id, name, contact, email, isVerified, is_verified_by_admin, oldPassword, newPassword } = updateUserDto;
 
-    // Fetch the user from the database
-    const user = await User.findOne({
-      where: { id },
-    });
 
-    if (!user) {
-      throw new Error('User not found');
-    }
+  async updateProfile(updateUserDto: UpdateProfileDto, req: any) {
+    const { name, contact, oldPassword, newPassword } = updateUserDto;
 
-    // Handle password update if oldPassword and newPassword are provided
-    if (oldPassword && newPassword) {
-      // Validate the old password
-      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
-      if (!isPasswordValid) {
-        throw new Error('Old password is incorrect');
+    try {
+      if (name && contact) {
+        // Update name and contact
+        await User.update(
+          { name, contact },
+          {
+            where: {
+              id: {
+                [Op.eq]: req.user.sub,
+              },
+            },
+          },
+        );
+
+        return {
+          message: 'Successfully updated the user profile',
+          statusCode: HttpStatus.OK,
+        };
       }
 
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
-      await user.save(); // Save the updated password
+      if (oldPassword && newPassword) {
+        // Fetch the user from the database
+        const user = await User.findOne({
+          where: {
+            id: {
+              [Op.eq]: req.user.sub,
+            },
+          },
+        });
+
+        if (!user) {
+          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        }
+
+        // Validate the old password
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+          throw new HttpException('Old password is incorrect', HttpStatus.BAD_REQUEST);
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save(); // Save the updated password
+
+        return {
+          message: 'Successfully updated the password',
+          statusCode: HttpStatus.OK,
+        };
+      }
+
+      // If neither name/contact nor password is provided
+      throw new HttpException('No valid fields provided for update', HttpStatus.BAD_REQUEST);
+    } catch (error) {
+      // Handle errors and send them to the frontend
+      if (error instanceof HttpException) {
+        throw error; // Re-throw HttpException to send it to the frontend
+      } else {
+        throw new HttpException(
+          'An error occurred while updating the profile',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+  }
+
+  async updateUser(updateUserDto: UpdateUserDto, req: any) {
+    const { id, name, contact, email, isVerified } = updateUserDto;
+
+    try {
+
+
+      // Fetch the user from the database
+      const user = await User.findOne({
+        where: { id },
+      });
+
+      const user_exist_email = await User.findOne({
+        where: {
+          email: {
+            [Op.eq]: updateUserDto.email
+          }
+        }
+      })
+
+      if (user_exist_email && user_exist_email.email !== user.email) {
+        throw new Error("Email with user already exist")
+      }
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+
+
+      user.name = name;
+      user.contact = contact;
+      user.email = email;
+      user.isVerified = isVerified
+
+      await user.save()
+
+
+      return {
+        message: 'Successfully updated the user',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error.message)
+      throw new Error(error.message || "Update of User profile failed")
     }
 
-    // Update profile fields
-    const updatedFields = {
-      name: name || user.name,
-      contact: contact || user.contact,
-      email: email || user.email,
-      isVerified: isVerified !== undefined ? isVerified : user.isVerified,
-      is_verified_by_admin: is_verified_by_admin !== undefined ? is_verified_by_admin : user.is_verified_by_admin,
-    };
-
-    await User.update(updatedFields, {
-      where: { id },
-    });
-
-    return {
-      message: 'Successfully updated the user',
-      statusCode: HttpStatus.OK,
-    };
   }
 
 
   async updatePassword(createForgotDto: UpdatePasswordDto, req: any) {
     const { password, otp, email } = createForgotDto;
 
-    const otpRecord = await Otp.findOne({
-      where: {
-        otp,
-        email,
-        isVerified: true,
-      },
-    });
+    try {
+      const otpRecord = await Otp.findOne({
+        where: {
+          otp,
+          email,
+          isVerified: true,
+        },
+      });
 
-    if (!otpRecord) {
-      throw new Error('Unable to Update password');
+      if (!otpRecord) {
+        throw new Error('Unable to Update password');
+      }
+      const user = await User.findOne({
+        where: {
+          email: {
+            [Op.eq]: email
+          }
+        },
+      });
+
+      if (!user) {
+        throw new Error('Unable to Update password');
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.password = hashedPassword;
+      await user.save();
+
+      await otpRecord.destroy();
+
+      return {
+        message: 'Successfully updated the password',
+        statusCode: HttpStatus.OK,
+      };
+
+    } catch (error) {
+      throw new Error("Update of User failed")
     }
-    const user = await User.findOne({
-      where: {
-        email,
-      },
-    });
 
-    if (!user) {
-      throw new Error('Unable to Update password');
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    await otpRecord.destroy();
-
-    return {
-      message: 'Successfully updated the password',
-      statusCode: HttpStatus.OK,
-    };
   }
 
 
@@ -393,6 +487,7 @@ export class UserService {
       const existingUser = await User.findOne({
         where: { email: createUserByAdminDto.email },
       });
+
       if (existingUser) {
         return {
           message: 'User already exists',
@@ -402,60 +497,83 @@ export class UserService {
           },
         };
       }
-  
+
+      // Validate role-specific fields before creating anything
+      if (createUserByAdminDto.role === Role.USER) {
+        if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
+          throw new Error('Failed to create Student: level and parent are required');
+        }
+      }
+
+      if (createUserByAdminDto.role === Role.TEACHER) {
+        if (!createUserByAdminDto.level_id) {
+          throw new Error('Failed to create Teacher: level/grade is required');
+        }
+      }
+
       // Hash the password
       const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
-  
-      // Create the user and associated profile based on the role
-      const res = await User.create({
+
+      // Create the user
+      const user = await User.create({
         name: createUserByAdminDto.name,
         email: createUserByAdminDto.email,
         password: hashedPassword,
         contact: createUserByAdminDto.contact,
         role: createUserByAdminDto.role,
         isVerified: true,
-      }).then(async (u) => {
-        if (createUserByAdminDto.role == Role.USER) {
-          await StudentProfile.create({
+      });
+
+      // Create role-specific profiles
+      if (createUserByAdminDto.role === Role.USER) {
+        await StudentProfile.create({
+          level_id: createUserByAdminDto.level_id,
+          user_id: user.id,
+          user_roll_no: createUserByAdminDto.user_roll_no,
+          id: user.id,
+          school_id: req.user.school_id,
+          parent_id: createUserByAdminDto.parent_id,
+        });
+      } else if (createUserByAdminDto.role === Role.TEACHER) {
+        const teacher = await TeacherProfile.create({
+          user_id: user.id,
+          id: user.id,
+          title: '',
+          level_id: createUserByAdminDto.level_id,
+          school_id: req.user.school_id,
+        });
+
+        // Create join records for teacher subjects
+        for (const subjectId of createUserByAdminDto.subjects) {
+          await JoinTeacherSubjectLevel.create({
             level_id: createUserByAdminDto.level_id,
-            user_id: u.id,
-            user_roll_no: createUserByAdminDto.user_roll_no,
-            id: u.id,
-            school_id: req.user.school_id,
-            parent_id: createUserByAdminDto.parent_id,
-          });
-        } else if (createUserByAdminDto.role == Role.TEACHER) {
-          await TeacherProfile.create({
-            user_id: u.id,
-            id: u.id,
-            title: "",
-            level_id: createUserByAdminDto.level_id,
-            school_id: req.user.school_id,
-          });
-        } else if (createUserByAdminDto.role == Role.PARENT) {
-          await ParentProfile.create({
-            user_id: u.id,
-            id: u.id,
-            school_id: req.user.school_id,
+            subject_id: subjectId,
+            teacher_id: teacher.id,
           });
         }
-        return u;
-      });
-  
+      } else if (createUserByAdminDto.role === Role.PARENT) {
+        await ParentProfile.create({
+          user_id: user.id,
+          id: user.id,
+          school_id: req.user.school_id,
+        });
+      }
+
       // Return success response
       return {
         message: 'User successfully registered.',
         statusCode: HttpStatus.OK,
         data: {
-          id: res.id,
-          name: res.name,
-          email: res.email,
+          id: user.id,
+          name: user.name,
+          email: user.email,
         },
       };
     } catch (error) {
       // Handle errors and log them if necessary
       console.error('Error in createUser:', error);
-  
+
+      // Return error response
       return {
         message: 'An error occurred while creating the user.',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -463,7 +581,6 @@ export class UserService {
       };
     }
   }
-  
 
 
   async signup(createUserDto: CreateUserDto, res: Response) {
@@ -631,7 +748,9 @@ export class UserService {
   async login(userLoginDto: UserLoginDto) {
     const { email, password } = userLoginDto;
     this.logger.log(`USER login creadentaila , ${userLoginDto}`);
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: { email }
+    });
 
     if (!user) {
       throw new UnauthorizedException('No User exist');
@@ -705,6 +824,8 @@ export class UserService {
     this.logger.log(
       `jwt access token ${accessToken} \n jwt refresh token ${refreshToken}`,
     );
+
+    delete user.password;
     return {
       message: 'Login successful.',
       statusCode: 200,
@@ -715,12 +836,11 @@ export class UserService {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          isVerified: user.isVerified,
-          level_id: profile?.level_id ? profile.level_id : null,
-          school_id: profile?.school_id ? profile.school_id : null
+          contact: user.contact,
+          user_image_url: user.user_image_url,
+          role: user.role
 
-        },
+        }
       },
     };
   }
@@ -870,19 +990,19 @@ export class UserService {
       const user = await User.findByPk(req.sub, {
         attributes: ["user_image_url"],
       });
-  
+
       // Delete the old avatar if it exists
       if (user?.user_image_url) {
         await unlink(user.user_image_url);
       }
-  
+
       // Update the user's avatar URL in the database
-     
+
       // Construct the public URL for the avatar
-      const avatarUrl = `${req.protocol}://${req.get('host')}/images/${image.filename}`;
+
       await User.update(
         {
-          user_image_url: avatarUrl, // Store the local file path
+          user_image_url: image.filename, // Store the local file path
         },
         {
           where: {
@@ -892,12 +1012,12 @@ export class UserService {
           },
         }
       );
-  
+
       return {
         statusCode: 200,
         message: "Avatar updated successfully",
         data: {
-          avatarUrl, // Return the public URL
+          avatarUrl: image.filename, // Return the public URL
         },
       };
     } catch (error) {

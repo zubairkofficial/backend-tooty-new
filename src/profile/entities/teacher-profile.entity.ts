@@ -67,6 +67,6 @@ export class TeacherProfile extends Model {
     @BelongsToMany(() => Subject, () => JoinTeacherSubjectLevel)
     subjects!: Subject[]
 
-    @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
-    level_join_table!: Level[]
+    // @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
+    // level_join_table!: Level[]
 }

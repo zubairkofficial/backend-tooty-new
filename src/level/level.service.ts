@@ -84,8 +84,8 @@ export class LevelService {
                 description: updateLevelDto.description
             }, {
                 where: {
-                    level: {
-                        [Op.eq]: updateLevelDto.level
+                    id: {
+                        [Op.eq]: updateLevelDto.level_id
                     }
                 }
             });

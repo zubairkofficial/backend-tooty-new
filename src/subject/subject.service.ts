@@ -6,6 +6,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { getErrorMessage } from 'src/utils/errors.utils';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { User } from 'src/user/entities/user.entity';
+import { Level } from 'src/level/entity/level.entity';
+import { School } from 'src/school/entities/school.entity';
 
 
 export class SubjectService {
@@ -86,7 +88,12 @@ export class SubjectService {
 
   async getSubject(getSubjectDto: GetSubjectDto) {
     try {
-      const subject = await Subject.findByPk(getSubjectDto.subject_id);
+      const subject = await Subject.findByPk(getSubjectDto.subject_id, {
+        include: [{
+          model: Level,
+          as: "level"
+        }]
+      });
 
       if (!subject) {
         throw new HttpException(
@@ -121,6 +128,10 @@ export class SubjectService {
               [Op.eq]: req.user.school_id
             }
           },
+          include: [{
+            model: Level,
+            as: "level"
+          }],
           limit,
           offset,
         });
@@ -128,7 +139,17 @@ export class SubjectService {
         total = result.count; // Total count of subjects
       } else {
         // Return all subjects if page and limit are not provided
-        subjects = await Subject.findAll();
+        subjects = await Subject.findAll({
+          where: {
+            school_id: {
+              [Op.eq]: req.user.school_id
+            }
+          },
+          include: [{
+            model: Level,
+            as: "level"
+          }],
+        });
         total = subjects.length;
       }
 
@@ -148,9 +169,49 @@ export class SubjectService {
     }
   }
 
-  async updateSubject(updateSubjectDto: UpdateSubjectDto) {
+
+  async updateSubject(updateSubjectDto: UpdateSubjectDto, req: any) {
     try {
-      const [updated] = await Subject.update(
+      const subject = await Subject.findOne({
+        where: {
+          id: updateSubjectDto.id,
+          school_id: req.user.school_id, // Ensure the subject belongs to the same school
+        },
+      });
+
+      if (!subject) {
+        throw new HttpException(
+          {
+            errorCode: 2002,
+            message: 'Subject not found or does not belong to the current school.',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // Check if the new title already exists for the same school and level
+      if (updateSubjectDto.title) {
+        const existingSubject = await Subject.findOne({
+          where: {
+            title: updateSubjectDto.title,
+            level_id: updateSubjectDto.level_id,
+            school_id: req.user.school_id,
+            id: { [Op.ne]: updateSubjectDto.id }, // Exclude the current subject
+          },
+        });
+
+        if (existingSubject) {
+          throw new HttpException(
+            {
+              errorCode: 2003,
+              message: 'Subject with this title already exists for the given school and level.',
+            },
+            HttpStatus.CONFLICT,
+          );
+        }
+      }
+
+      await Subject.update(
         {
           title: updateSubjectDto.title,
           display_title: updateSubjectDto.display_title,
@@ -159,22 +220,11 @@ export class SubjectService {
         },
         {
           where: {
-            id: {
-              [Op.eq]: updateSubjectDto.id,
-            },
+            id: updateSubjectDto.id,
+            school_id: req.user.school_id, // Ensure the update is scoped to the same school
           },
         },
       );
-
-      if (!updated) {
-        throw new HttpException(
-          {
-            errorCode: 2002,
-            message: getErrorMessage(2002),
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
 
       return {
         statusCode: 200,
@@ -185,14 +235,34 @@ export class SubjectService {
     }
   }
 
+
   async createSubject(createSubjectDto: CreateSubjectDto, req: any) {
     try {
+      // Ensure unique constraint is respected
+      const existingSubject = await Subject.findOne({
+        where: {
+          title: createSubjectDto.title,
+          level_id: createSubjectDto.level_id,
+          school_id: req.user.school_id,
+        },
+      });
+
+      if (existingSubject) {
+        throw new HttpException(
+          {
+            errorCode: 2001,
+            message: 'Subject with this title already exists for the given school and level.',
+          },
+          HttpStatus.CONFLICT,
+        );
+      }
+
       await Subject.create({
         title: createSubjectDto.title,
         display_title: createSubjectDto.display_title,
         description: createSubjectDto.description,
         level_id: createSubjectDto.level_id,
-        school_id: req.user.school_id
+        school_id: req.user.school_id,
       });
 
       return {

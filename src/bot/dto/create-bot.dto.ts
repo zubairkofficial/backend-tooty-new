@@ -122,6 +122,7 @@ export class UpdateBotDto {
         example: 2,
     })
     @IsNumber()
+    @IsNotEmpty()
     level_id: number;
 
     @ApiProperty({
@@ -129,6 +130,7 @@ export class UpdateBotDto {
         example: 102,
     })
     @IsNumber()
+    @IsNotEmpty()
     subject_id: number;
 }
 

@@ -10,10 +10,11 @@ import { SuperAdminProfile } from 'src/profile/entities/super-admin.entity';
 import { Bot } from 'src/bot/entities/bot.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { School } from 'src/school/entities/school.entity';
+import { Level } from 'src/level/entity/level.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([File, SuperAdminProfile,Bot, Subject, School]), ConfigModule],
+    SequelizeModule.forFeature([File, SuperAdminProfile,Bot, Subject, School, Level]), ConfigModule],
   controllers: [ContextDataController],
   providers: [ContextDataService, JwtService]
 })

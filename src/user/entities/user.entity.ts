@@ -69,11 +69,6 @@ export class User extends Model {
   })
   isVerified: boolean;
 
-  @Default(false)
-  @Column({
-    type: DataType.BOOLEAN,
-  })
-  is_verified_by_admin: boolean;
 
   @HasOne(() => RefreshToken, { onDelete: 'CASCADE' })
   refresh_token!: RefreshToken;

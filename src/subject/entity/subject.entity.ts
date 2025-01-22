@@ -33,52 +33,54 @@ export class Subject extends Model {
     })
     id: number;
 
-    @Unique
+    @Unique('unique_subject')
     @Column({
         type: DataType.STRING
     })
-    title: string
+    title: string;
 
     @Column({
         type: DataType.STRING
     })
-    display_title: string
+    display_title: string;
 
     @Column({
         type: DataType.TEXT
     })
-    description: string
+    description: string;
 
     @ForeignKey(() => Level)
+    @Unique('unique_subject')
     @Column({
         type: DataType.INTEGER
     })
-    level_id: number
+    level_id: number;
 
     @ForeignKey(() => School)
+    @Unique('unique_subject')
     @Column({
         type: DataType.INTEGER
     })
-    school_id: number
+    school_id: number;
 
     @HasMany(() => File)
-    files!: File[]
+    files!: File[];
 
     @HasMany(() => Quiz, { onDelete: "CASCADE" })
-    quizez!: Quiz[]
+    quizez!: Quiz[];
 
-    @BelongsTo(() => Level)
-    level!: Level
+    @BelongsTo(() => Level, { as: 'level' })
+    level!: Level;
 
     @BelongsTo(() => School, { onDelete: 'CASCADE' })
-    school!: School
+    school!: School;
 
     @HasOne(() => Bot)
-    bot!: Bot
+    bot!: Bot;
 
     @BelongsToMany(() => TeacherProfile, () => JoinTeacherSubjectLevel)
-    teachers!: TeacherProfile[]
+    teachers!: TeacherProfile[];
 
-    @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
-    level_join_table!: Level[]
+    // @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
+    // level_join_table!: Level[];
 }

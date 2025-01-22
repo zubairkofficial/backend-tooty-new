@@ -65,7 +65,7 @@ export class SubjectController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Put('update-subject')
     async updateSubject(@Body() updateSubjectDto: UpdateSubjectDto, @Req() req: any) {
-        return this.subjectServices.updateSubject(updateSubjectDto);
+        return this.subjectServices.updateSubject(updateSubjectDto, req);
     }
 
     @ApiOperation({ summary: 'Create a new subject' })

@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, HasMany, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { BelongsTo, Column, DataType, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
 import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { File } from 'src/context_data/entities/file.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
@@ -21,9 +21,9 @@ export class School extends Model {
   })
   id: number;
 
+  @Unique
   @Column({
     type: DataType.STRING,
-    unique: true,
   })
   name: string;
 

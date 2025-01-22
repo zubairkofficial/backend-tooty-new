@@ -1,13 +1,35 @@
 import { IsBoolean, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  name: string
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  contact: string
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  oldPassword: string
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string
+
+}
 export class UpdateUserDto {
   @ApiProperty({
     description: 'Unique identifier of the user',
     example: 1,
     required: false,
   })
-  @IsOptional()
+ 
   @IsNumber()
   id: number;
 
@@ -16,8 +38,10 @@ export class UpdateUserDto {
     example: 'John Doe',
     required: false,
   })
-  @IsOptional()
+
+ 
   @IsString({ message: 'Name should be a string' })
+  @IsNotEmpty()
   name: string;
 
   @ApiProperty({
@@ -25,8 +49,10 @@ export class UpdateUserDto {
     example: 'john.doe@example.com',
     required: false,
   })
-  @IsOptional()
+
+ 
   @IsEmail({}, { message: 'Invalid email format' })
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty({
@@ -34,8 +60,9 @@ export class UpdateUserDto {
     example: '+1234567890',
     required: false,
   })
-  @IsOptional()
+  
   @IsString({ message: 'Contact should be a string' })
+  @IsNotEmpty()
   contact: string;
 
   @ApiProperty({
@@ -43,36 +70,10 @@ export class UpdateUserDto {
     example: true,
     required: false,
   })
-  @IsOptional()
+
   @IsBoolean({ message: 'isVerified should be a boolean' })
   isVerified: boolean;
 
-  @ApiProperty({
-    description: 'Admin verification status of the user',
-    example: true,
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean({ message: 'is_verified_by_admin should be a boolean' })
-  is_verified_by_admin: boolean;
 
-  @ApiProperty({
-    description: 'Old password of the user',
-    example: 'oldPassword123',
-    required: false,
-  })
-  @IsOptional()
-  @IsString({ message: 'Old password should be a string' })
-  @MinLength(6, { message: 'Old password must be at least 6 characters long' })
-  oldPassword: string;
 
-  @ApiProperty({
-    description: 'New password of the user',
-    example: 'newPassword123',
-    required: false,
-  })
-  @IsOptional()
-  @IsString({ message: 'New password should be a string' })
-  @MinLength(6, { message: 'New password must be at least 6 characters long' })
-  newPassword: string;
 }

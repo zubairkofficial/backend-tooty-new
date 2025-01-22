@@ -3,7 +3,7 @@ import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 
 export class UpdateTeacherProfileDto {
-    
+
     @ApiProperty({
         description: 'The title of the teacher',
         example: 'Dr.',
@@ -53,6 +53,7 @@ export class CreateJoinTeacherSubjectLevel {
         example: 1,
     })
     @IsNumber()
+    @IsNotEmpty()
     level_id: number;
 
     @ApiProperty({
@@ -60,6 +61,7 @@ export class CreateJoinTeacherSubjectLevel {
         type: [Number],
         example: [1, 2, 3],  // Example with multiple subject IDs
     })
+    @IsNotEmpty()
     subject_id: any[];
 
     @ApiProperty({
@@ -67,6 +69,7 @@ export class CreateJoinTeacherSubjectLevel {
         example: 123,
     })
     @IsNumber()
+    @IsNotEmpty()
     teacher_id: number;
 }
 export class DeleteJoinTeacherSubjectLevel {

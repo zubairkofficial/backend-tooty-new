@@ -299,43 +299,36 @@ export class ProfileService {
 
     async createJoinTeacherSubjectLevel(createJoinTeacherSubjectLevelDto: CreateJoinTeacherSubjectLevel, req: any) {
         try {
-            // Using for...of with async/await to wait for each iteration
+            console.log(createJoinTeacherSubjectLevelDto)
             for (const id of createJoinTeacherSubjectLevelDto.subject_id) {
-                const join_already_exist = await JoinTeacherSubjectLevel.findOne({
+                const joinAlreadyExist = await JoinTeacherSubjectLevel.findOne({
                     where: {
-                        level_id: {
-                            [Op.eq]: createJoinTeacherSubjectLevelDto.level_id
-                        },
-                        subject_id: {
-                            [Op.eq]: Number(id)
-                        },
-                        teacher_id: {
-                            [Op.eq]: createJoinTeacherSubjectLevelDto.teacher_id
-                        },
-                    }
+                        level_id: createJoinTeacherSubjectLevelDto.level_id,
+                        subject_id: Number(id),
+                        teacher_id: createJoinTeacherSubjectLevelDto.teacher_id,
+                    },
                 });
-    
-                if (join_already_exist) {
-                    throw new Error("Subject already assigned to the teacher at this level.");
+
+                if (!joinAlreadyExist) {
+                    await JoinTeacherSubjectLevel.create({
+                        level_id: createJoinTeacherSubjectLevelDto.level_id,
+                        subject_id: Number(id),
+                        teacher_id: createJoinTeacherSubjectLevelDto.teacher_id,
+                    });
+                } else {
+                    console.log(`Join for level ${createJoinTeacherSubjectLevelDto.level_id}, subject ${id}, and teacher ${createJoinTeacherSubjectLevelDto.teacher_id} already exists.`);
                 }
-    
-                // Create the join for teacher and subject
-                await JoinTeacherSubjectLevel.create({
-                    level_id: createJoinTeacherSubjectLevelDto.level_id,
-                    subject_id: Number(id),
-                    teacher_id: createJoinTeacherSubjectLevelDto.teacher_id
-                });
             }
-    
+
             return {
                 statusCode: 200,
                 message: "Teacher-level-subject join created successfully.",
             };
         } catch (error) {
-            throw new Error(error.original.detail || "Error creating teacher-level-subject join");
+            throw new Error(error.message || "Error creating teacher-level-subject join");
         }
     }
-    
+
 
     async getTeacherProfile(getTeacherProfile: GetTeacherProfileDto, req: any) {
         try {
@@ -422,7 +415,7 @@ export class ProfileService {
             const data = await StudentProfile.findAll({
 
                 where: {
-                   
+
                     parent_id: {
                         [Op.eq]: req.user.sub,
                     },
@@ -447,18 +440,18 @@ export class ProfileService {
         }
     }
 
-    async getChildrenById(params: any,req) {
+    async getChildrenById(params: any, req) {
         try {
-            console.log(`Fetching student profile with relations for student_id: ${params.child_id }`);
+            console.log(`Fetching student profile with relations for student_id: ${params.child_id}`);
 
             // Validate input
-            if (!params.child_id  || isNaN(params.child_id )) {
+            if (!params.child_id || isNaN(params.child_id)) {
                 throw new Error('Invalid params.child_id  provided');
             }
 
             const studentProfile = await StudentProfile.findOne({
                 where: {
-                    id: params.child_id ,
+                    id: params.child_id,
                 },
                 include: [
                     {
@@ -473,7 +466,7 @@ export class ProfileService {
                         model: User,
                         as: 'user', // Ensure this matches the alias in the model
                     },
-                    
+
                     {
                         model: QuizAttempt,
                         as: 'attempted_quizes',
@@ -492,7 +485,7 @@ export class ProfileService {
             });
 
             if (!studentProfile) {
-                throw new Error(`No student profile found for params.child_id : ${params.child_id }`);
+                throw new Error(`No student profile found for params.child_id : ${params.child_id}`);
             }
 
             console.log('Fetched student profile:', studentProfile);
@@ -512,7 +505,7 @@ export class ProfileService {
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
-    
+
     }
     async getStudentsByLevel(req: any) {
         try {

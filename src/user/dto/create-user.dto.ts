@@ -96,6 +96,10 @@ export class CreateUserByAdminDto {
   @IsNumber()
   level_id: number;
 
+  @ApiProperty({ description: 'ID of the subject assigned', example: 3 })
+  @IsOptional()
+  subjects: number[];
+
   @ApiProperty({ description: 'ID of the user paretn', example: 3 })
   @IsOptional()
   @IsNumber()

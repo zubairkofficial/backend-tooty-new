@@ -9,6 +9,7 @@ import { QuizType } from 'src/utils/quizType.enum';
 
 export class EditQuestionDto {
   @IsNumber()
+  @IsOptional()
   id: number;
 
   @IsOptional()

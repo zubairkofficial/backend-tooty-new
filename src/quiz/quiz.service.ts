@@ -96,7 +96,6 @@ export class QuizService {
   }
 
 
-
   async editQuiz(editQuizDto: EditQuizDto, req: any): Promise<Quiz> {
     const transaction = await this.sequelize.transaction();
 
@@ -135,46 +134,60 @@ export class QuizService {
       // Handle questions and options
       if (questions) {
         for (const questionDto of questions) {
-          const question = await this.questionModel.findByPk(questionDto.id, { transaction });
+          let question = await this.questionModel.findByPk(questionDto.id, { transaction });
+
+          // If the question doesn't exist, create it
           if (!question) {
-            throw new NotFoundException(`Question with ID ${questionDto.id} not found`);
-          }
-
-          if (questionDto.text) {
-            question.text = questionDto.text;
-          }
-
-          // If the quiz type is MCQS, each question contributes 1 to the totalScore
-          if (quiz.quiz_type === QuizType.MCQS) {
-            totalScore += 1;
-            question.score = 1
-          } else if (quiz.quiz_type === QuizType.QA) {
-            // For other quiz types, use the score provided in the questionDto
-
-            question.score = questionDto.score;
-            totalScore += questionDto.score;
-
+            question = await this.questionModel.create(
+              {
+                quiz_id: quiz.id,
+                text: questionDto.text,
+                score: questionDto.score,
+                question_type: quiz.quiz_type == QuizType.QA ? QuizType.QA : QuizType.MCQS,
+              },
+              { transaction }
+            );
+          } else {
+            if (questionDto.text) {
+              question.text = questionDto.text;
+            }
+            if (quiz.quiz_type === QuizType.QA && questionDto.score) {
+              question.score = questionDto.score;
+            }
           }
 
           await question.save({ transaction });
-          if (quiz.quiz_type === QuizType.MCQS) {
-            if (questionDto.options) {
-              for (const optionDto of questionDto.options) {
-                const option = await this.optionModel.findByPk(optionDto.id, { transaction });
-                if (!option) {
-                  throw new NotFoundException(`Option with ID ${optionDto.id} not found`);
-                }
 
+
+          totalScore += question.score; // Use the score provided for QA
+
+
+          // Handle options for MCQS type
+          if (quiz.quiz_type === QuizType.MCQS && questionDto.options) {
+            for (const optionDto of questionDto.options) {
+              let option = await this.optionModel.findByPk(optionDto.id, { transaction });
+
+              // If the option doesn't exist, create it
+              if (!option) {
+                option = await this.optionModel.create(
+                  {
+                    question_id: question.id,
+                    text: optionDto.text,
+                    is_correct: optionDto.isCorrect || false,
+                  },
+                  { transaction }
+                );
+              } else {
                 if (optionDto.text) {
                   option.text = optionDto.text;
                 }
-
 
                 // Handle correct option updates
                 if (optionDto.isCorrect) {
                   // Check if there's an existing correct option
                   const currentCorrectOption = await this.optionModel.findOne({
-                    where: { question_id: question.id, is_correct: true }
+                    where: { question_id: question.id, is_correct: true },
+                    transaction,
                   });
 
                   if (currentCorrectOption && currentCorrectOption.id !== optionDto.id) {
@@ -186,13 +199,11 @@ export class QuizService {
                 } else {
                   option.is_correct = false;
                 }
-
-
-                await option.save({ transaction });
               }
+
+              await option.save({ transaction });
             }
           }
-
         }
       }
 
@@ -207,6 +218,7 @@ export class QuizService {
       throw error;
     }
   }
+
 
 
 

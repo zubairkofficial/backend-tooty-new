@@ -13,14 +13,19 @@ import {
 import { Pool, PoolConfig } from "pg";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-import { OpenAIEmbeddings } from '@langchain/openai';
+import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
 import { unlink } from 'fs';
 import { SuperAdminProfile } from 'src/profile/entities/super-admin.entity';
-
+import { promisify } from 'util';
+import axios from 'axios'
+import { Subject } from 'src/subject/entity/subject.entity';
+import { Level } from 'src/level/entity/level.entity';
 export class ContextDataService {
     constructor(
-        private readonly logger = new Logger()) { }
+        private readonly logger = new Logger(),
+        private unlinkAsync = promisify(unlink)
+    ) { }
 
 
     async getFilesBySubject(getFileBySubjectDto: GetFilesBySubjectDto, req: any) {
@@ -62,6 +67,14 @@ export class ContextDataService {
                     where: {
                         school_id: req.user.school_id, // Filter files by user ID
                     },
+                    include: [{
+                        model: Subject,
+                        attributes: ["title"],
+                        include: [{
+                            model: Level,
+                            as: 'level'
+                        }]
+                    }],
                     limit,
                     offset,
                 });
@@ -74,6 +87,15 @@ export class ContextDataService {
                     where: {
                         school_id: req.user.school_id, // Filter files by user ID
                     },
+                    include: [{
+                        model: Subject,
+                        attributes: ["title"],
+                        include: [{
+                            model: Level,
+                            as: 'level'
+                        }]
+
+                    }],
                 });
                 totalCount = files.length;
                 totalPages = 1; // No pagination, so totalPages is 1
@@ -162,155 +184,214 @@ export class ContextDataService {
         return splittedArray;
     }
 
-    async processFile(file: Express.Multer.File,
+
+    async fileDelete(filePath: string): Promise<void> {
+        try {
+            await this.unlinkAsync(filePath);
+            console.log(`File deleted successfully: ${filePath}`);
+        } catch (err) {
+            console.error(`Error deleting file ${filePath}: ${err.message}`);
+        }
+    }
+
+    async validateOpenAIKeyWithLangChain(apiKey: string): Promise<boolean> {
+        try {
+            const model = new ChatOpenAI({
+                openAIApiKey: apiKey,
+                temperature: 0,
+            });
+
+            // Perform a minimal test query
+            const response = await model.invoke('Validate OpenAI API key');
+            return !!response;
+        } catch (error) {
+            console.log("error open ai key", error.message)
+            return false;
+
+        }
+    }
+
+    async processFile(
+        file: Express.Multer.File,
         createFileDto: CreateFileDto,
         req: any,
-        onProgress: (progress: number) => void,) {
-
+        onProgress: (progress: number) => void,
+    ) {
         console.log('req user:', req.user);
         console.log('File received:', file.originalname, createFileDto.file_name);
 
+        // Validate file type
         if (!file.originalname.endsWith('.pdf')) {
+            onProgress(-1); // Indicate error to the caller
+            await this.fileDelete(file.path); // Use fileDelete
             throw new Error('Only PDF files are supported');
         }
 
-        const api = await SuperAdminProfile.findOne({
-            attributes: ['openai']
-        });
-        if (!api) {
-            throw new Error('Unable to find API key');
-        }
+        try {
+            // Fetch API key
+            const api = await SuperAdminProfile.findOne({
+                attributes: ['openai'],
+            });
+            if (!api || !api.openai) {
+                onProgress(-1);
+                await this.fileDelete(file.path); // Use fileDelete
+                throw new Error('API key is missing or not found');
+            }
 
-        const api_key = api.openai;
+            const api_key = api.openai;
 
-        if (api_key) {
+            // Validate API key
+            const isKeyValid = await this.validateOpenAIKeyWithLangChain(api_key);
+            if (!isKeyValid) {
+                onProgress(-1);
+                await this.fileDelete(file.path);
+                throw new Error('The OpenAI API key is invalid or expired. Please update the key.');
+            }
 
             // 1. Load PDF
             const loader = new PDFLoader(file.path, {
-                splitPages: false
+                splitPages: false,
             });
 
-            const singleDoc = await loader.load();
+            let singleDoc;
+            try {
+                singleDoc = await loader.load();
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                onProgress(-1);
+                await this.fileDelete(file.path); // Use fileDelete
+                throw new Error('Failed to parse PDF. Ensure the PDF contains selectable text.');
+            }
 
+            // 2. Split text into chunks
             const textSplitter = new RecursiveCharacterTextSplitter({
                 chunkSize: 1000,
                 chunkOverlap: 0,
             });
 
-            const docs = await textSplitter.createDocuments([singleDoc[0].pageContent]);
+            let docs;
+            try {
+                docs = await textSplitter.createDocuments([singleDoc[0].pageContent]);
+            } catch (error) {
+                console.error('Error splitting PDF:', error);
+                onProgress(-1);
+                await this.fileDelete(file.path); // Use fileDelete
+                throw new Error('Failed to split PDF. Ensure the PDF contains selectable text.');
+            }
 
+            console.log('Total docs:', docs.length);
 
-            console.log("docs", docs.length)
+            // 3. Initialize embeddings
             const embeddings = new OpenAIEmbeddings({
                 apiKey: api_key,
                 model: process.env.OPEN_AI_EMBEDDING_MODEL,
                 dimensions: 1536,
             });
+
             // 4. Connect to PgVectorStore
-            // Initialize Sequelize
-            // Sample config
             const config = {
                 postgresConnectionOptions: {
-                    type: "postgres",
-                    host: `${process.env.DB_HOST}`,
-
-                    password: `${process.env.DB_PASSWORD}`,
-                    database: `${process.env.DB_NAME}`,
-
-                    port: Number(`${process.env.DB_PORT}`),
-                    user: `${process.env.DB_USERNAME}`,
-
+                    type: 'postgres',
+                    host: process.env.DB_HOST,
+                    password: process.env.DB_PASSWORD,
+                    database: process.env.DB_NAME,
+                    port: Number(process.env.DB_PORT),
+                    user: process.env.DB_USERNAME,
                 } as PoolConfig,
-                tableName: "vector_data",
+                tableName: 'vector_data',
                 columns: {
-                    idColumnName: "id",
-                    vectorColumnName: "vector",
-                    contentColumnName: "content",
-                    metadataColumnName: "metadata",
-
+                    idColumnName: 'id',
+                    vectorColumnName: 'vector',
+                    contentColumnName: 'content',
+                    metadataColumnName: 'metadata',
                 },
-                // supported distance strategies: cosine (default), innerProduct, or euclidean
-                distanceStrategy: "cosine" as DistanceStrategy,
+                distanceStrategy: 'cosine' as DistanceStrategy,
             };
 
+            let vectorStore;
+            try {
+                vectorStore = await PGVectorStore.initialize(embeddings, config);
+            } catch (error) {
+                console.error('Error initializing vector store:', error);
+                onProgress(-1);
+                await this.fileDelete(file.path); // Use fileDelete
+                throw new Error('Failed to initialize vector store.');
+            }
 
+            // 5. Create file record in the database
+            let context_file;
+            try {
+                context_file = await File.create({
+                    file_name: createFileDto.file_name,
+                    slug: createFileDto.slug + "-" + new Date(),
+                    user_id: req.user.sub,
+                    subject_id: Number(createFileDto.subject_id),
+                    school_id: req.user.school_id,
+                });
+            } catch (error) {
+                console.error('Error creating file record:', error);
+                onProgress(-1);
+                await this.fileDelete(file.path); // Use fileDelete
+                throw new Error('Failed to create file record in the database.');
+            }
 
-            const vectorStore = await PGVectorStore.initialize(embeddings, config);
+            // 6. Add metadata to docs
+            const docsWithFileId = docs.map((doc) => ({
+                ...doc,
+                metadata: {
+                    file_id: context_file?.id,
+                    school_id: req.user.school_id,
+                },
+            }));
 
+            // 7. Process chunks
+            const splittedDocs = this.splitIntoTenPercentParts(docsWithFileId);
 
-
-            const context_file = await File.create({
-                file_name: createFileDto.file_name,
-                slug: createFileDto.slug,
-                user_id: req.user.sub,
-                subject_id: Number(createFileDto.subject_id),
-                school_id: req.user.school_id
-            });
-
-            const docsWithFileId = docs.map((doc) => (
-                {
-                    ...doc,
-                    metadata: {
-                        file_id: context_file?.id,
-                        school_id: req.user.school_id
-                    }
-
-                }
-            ))
-
-            const splittedDocs = this.splitIntoTenPercentParts(docsWithFileId)
-
-            // console.log("res", docs)
             try {
                 const totalChunks = splittedDocs.length;
                 let processedChunks = 0;
 
                 const promises = splittedDocs.map(async (chunkArray: Document[], index) => {
+                    const ids = chunkArray.map(() => uuidv4());
 
-                    const ids = chunkArray.map(() => uuidv4())
+                    try {
+                        await vectorStore.addDocuments(chunkArray, { ids });
+                    } catch (error) {
+                        console.error('Error adding documents to vector store:', error);
+                        throw error;
+                    }
 
-                    await vectorStore.addDocuments(chunkArray, { ids });
-
-
-                    // Update progress
                     processedChunks++;
                     const progress = Math.round((processedChunks / totalChunks) * 100);
-                    await File.update({
-                        processed: Number(progress)
-                    }, {
-                        where: {
-                            id: {
-                                [Op.eq]: context_file.id
-                            }
-                        }
-                    })
-                    if (progress == 100) {
-                        console.log("file path", file.path)
-                        unlink(file.path, (err) => {
-                            if (err) {
-                                console.error(`Error deleting file: ${err.message}`);
-                            } else {
-                                console.log('File deleted successfully');
-                            }
-                        });
+
+                    try {
+                        await File.update(
+                            { processed: Number(progress) },
+                            { where: { id: { [Op.eq]: context_file.id } } }
+                        );
+                    } catch (error) {
+                        console.error('Error updating progress:', error);
                     }
+
+                    if (progress === 100) {
+                        await this.fileDelete(file.path); // Use fileDelete
+                    }
+
                     onProgress(progress);
                 });
 
                 await Promise.all(promises);
-
             } catch (error) {
-                console.log("file path", file.path)
-                unlink(file.path, (err) => {
-                    if (err) {
-                        console.error(`Error deleting file: ${err.message}`);
-                    } else {
-                        console.log('File deleted successfully');
-                    }
-                });
-                console.error('Error adding to vector store :', error);
-                throw new Error('Error creating context data');
+                console.error('Error processing chunks:', error);
+                onProgress(-1);
+                throw new Error('Error creating context data.');
             }
+        } catch (error) {
+            console.error('Unhandled error:', error);
+            await this.fileDelete(file.path); // Use fileDelete
+            throw error;
         }
+
+
     }
 }

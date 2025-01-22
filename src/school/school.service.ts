@@ -28,6 +28,16 @@ export class SchoolsService {
   async createSchool(createSchoolDto: CreateSchoolDto): Promise<School> {
     this.logger.log('Creating a new school');
     try {
+      const school_exist = await this.schoolModel.findOne({
+        where: {
+          name: {
+            [Op.eq]: createSchoolDto.name
+          }
+        }
+      })
+      if (school_exist) {
+        throw new Error("School already exist with this name")
+      }
       const school = await this.schoolModel.create(createSchoolDto as any);
       this.logger.log(`School created successfully with ID ${school.id}`);
       return school;

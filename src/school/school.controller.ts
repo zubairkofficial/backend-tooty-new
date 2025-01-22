@@ -146,21 +146,21 @@ export class SchoolsController {
   // }
 
   // Restore a soft-deleted school by ID
-  @Post(':id/restore')
-  @Roles(Role.SUPER_ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Restore a soft-deleted school by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'School restored successfully' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'School not found' })
-  async restoreSchool(@Param('id') id: number) {
-    try {
-      await this.schoolsService.restoreSchool(id);
-      return { status: HttpStatus.OK, message: 'School restored successfully' };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to restore school',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
+  // @Post(':id/restore')
+  // @Roles(Role.SUPER_ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @ApiOperation({ summary: 'Restore a soft-deleted school by ID' })
+  // @ApiResponse({ status: HttpStatus.OK, description: 'School restored successfully' })
+  // @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'School not found' })
+  // async restoreSchool(@Param('id') id: number) {
+  //   try {
+  //     await this.schoolsService.restoreSchool(id);
+  //     return { status: HttpStatus.OK, message: 'School restored successfully' };
+  //   } catch (error) {
+  //     throw new HttpException(
+  //       error.message || 'Failed to restore school',
+  //       HttpStatus.INTERNAL_SERVER_ERROR,
+  //     );
+  //   }
+  // }
 }

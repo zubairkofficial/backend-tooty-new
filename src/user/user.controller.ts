@@ -28,7 +28,7 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto, UpdateUserDto } from './dto/update-user.dto';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
@@ -222,7 +222,18 @@ export class UserController {
   @ApiOperation({ summary: 'Update user details' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: any) {
-    return await this.userService.updateUser(updateUserDto, req);
+    return  this.userService.updateUser(updateUserDto, req);
+  }
+
+  @Put('update-profile')
+  @Roles(Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN,Role.USER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('access-token')// JWT Bearer authentication
+
+  @ApiOperation({ summary: 'Update user details' })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  async updateProfile(@Body() updateUserDto: UpdateProfileDto, @Req() req: any) {
+    return await this.userService.updateProfile(updateUserDto, req);
   }
 
   @Put('update-password')
