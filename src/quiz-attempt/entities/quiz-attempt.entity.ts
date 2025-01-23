@@ -1,4 +1,4 @@
-import { Table, Model, Column, DataType, ForeignKey, BelongsTo, HasMany, Default } from 'sequelize-typescript';
+import { Table, Model, Column, DataType, ForeignKey, BelongsTo, HasMany, Default, Unique } from 'sequelize-typescript';
 import { Answer } from 'src/answer/entities/answer.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { Quiz } from 'src/quiz/entities/quiz.entity';
@@ -12,6 +12,7 @@ export class QuizAttempt extends Model<QuizAttempt> {
   })
   id: number;
 
+  @Unique("quiz-attempt-unique")
   @ForeignKey(() => Quiz)
   @Column({
     type: DataType.INTEGER,
@@ -19,6 +20,7 @@ export class QuizAttempt extends Model<QuizAttempt> {
   })
   quiz_id: number;
 
+  @Unique("quiz-attempt-unique")
   @ForeignKey(() => StudentProfile)
   @Column({
     type: DataType.INTEGER,

@@ -44,7 +44,9 @@ export class LevelService {
                     limit,
                     offset,
                     where: {
-                        school_id: req.user.school_id
+                        school_id: {
+                            [Op.eq]: req.user.school_id
+                        }
                     },
                     raw: true,
                 });
@@ -54,13 +56,15 @@ export class LevelService {
                 // Return all levels if page and limit are not provided
                 levels = await Level.findAll({
                     where: {
-                        school_id: req.user.school_id
+                        school_id: {
+                            [Op.eq]: req.user.school_id
+                        }
                     },
                     raw: true,
                 });
                 total = levels.length;
             }
-            
+
 
             // Use the paginate helper function to structure the response
             const infoLevel = paginate(levels, total, page || 1, limit || total);

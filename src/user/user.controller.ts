@@ -67,14 +67,14 @@ export class UserController {
     if (!avatar) {
       throw new BadRequestException('No image uploaded');
     }
-  
+
     const result = await this.userService.updateAvatar(avatar, req);
     return result;
   }
 
 
   @Post('get-user')
-  @Roles(Role.ADMIN,Role.SUPER_ADMIN,Role.PARENT,Role.TEACHER,Role.USER)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT, Role.TEACHER, Role.USER)
   @ApiBearerAuth('access-token') // JWT Bearer authentication
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -191,8 +191,8 @@ export class UserController {
   }
 
   @Post('logout')
-  @Roles(Role.USER, Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(Role.USER, Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'User logout' })
   @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiResponse({ status: 200, description: 'User logged out successfully' })
@@ -201,6 +201,7 @@ export class UserController {
   }
 
   @Post('refresh-access-token')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   async refreshAccessToken(@Body() refreshAccessToken: RefreshAccessToken) {
@@ -215,18 +216,18 @@ export class UserController {
   }
 
   @Put('update-user')
-  @Roles(Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN,Role.USER)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
 
   @ApiOperation({ summary: 'Update user details' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: any) {
-    return  this.userService.updateUser(updateUserDto, req);
+    return this.userService.updateUser(updateUserDto, req);
   }
 
   @Put('update-profile')
-  @Roles(Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN,Role.USER)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
 

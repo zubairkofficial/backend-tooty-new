@@ -29,9 +29,23 @@ export class QuizService {
 
   async create(createQuizDto: CreateQuizDto, req: any): Promise<Quiz> {
     const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
+    console.log("quiz", createQuizDto);
 
-    // Validate quiz timing
-    if (start_time >= end_time) {
+    // Parse the incoming dates as UTC
+    const quizStartTime = new Date(`${start_time}T00:00:00Z`);
+    const quizEndTime = new Date(`${end_time}T00:00:00Z`);
+
+    // Get the current UTC date (without time)
+    const now = new Date();
+    const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    // Check if the quiz start time is in the past (compared to UTC date only)
+    if (quizStartTime < currentUTCDate) {
+      throw new Error("start_time must be greater than or equal to the current UTC date");
+    }
+
+    // Check if start_time is greater than or equal to end_time
+    if (quizStartTime >= quizEndTime) {
       throw new BadRequestException('Start time must be before end time');
     }
 
@@ -54,8 +68,8 @@ export class QuizService {
       title,
       description,
       quiz_type: quiz_type === QuizType.MCQS ? QuizType.MCQS : QuizType.QA,
-      start_time,
-      end_time,
+      start_time: start_time,
+      end_time: end_time,
       duration,
       level_id: req.user.level_id,
       subject_id,
@@ -73,8 +87,7 @@ export class QuizService {
       });
 
       totalScore += questionDto.score;
-      question.score = questionDto.score
-      // Add the question's score to the total score
+      question.score = questionDto.score;
 
       if (quiz.quiz_type === QuizType.MCQS) {
         // Add options for multiple-choice questions
@@ -106,19 +119,44 @@ export class QuizService {
         throw new NotFoundException(`Quiz with ID ${editQuizDto.id} not found`);
       }
 
-      // Check if the quiz has already started
+      // Get the current UTC date (without time)
       const currentDate = new Date();
-      if (currentDate >= quiz.start_time) {
+      const currentUTCDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
+
+      // Check if the quiz has already started
+      if (currentUTCDate >= new Date(quiz.start_time)) {
         throw new BadRequestException('Quiz cannot be edited after it has started');
       }
 
       const { title, description, start_time, end_time, duration, subject_id, questions } = editQuizDto;
 
+      // Parse the incoming dates as UTC
+      if (start_time) {
+        const quizStartTime = new Date(`${start_time}T00:00:00Z`);
+
+        // Check if the new start_time is in the past
+        if (quizStartTime < currentUTCDate) {
+          throw new BadRequestException('start_time must be greater than or equal to the current UTC date');
+        }
+
+      
+        quiz.start_time = start_time;
+      }
+
+      if (end_time) {
+        const quizEndTime = new Date(`${end_time}T00:00:00Z`);
+
+        // Check if the new end_time is less than the new start_time
+        if (quizEndTime <= new Date(quiz.start_time)) {
+          throw new BadRequestException('End time must be after start time');
+        }
+
+        quiz.end_time = end_time;
+      }
+
       // Update quiz fields if provided
       if (title) quiz.title = title;
       if (description) quiz.description = description;
-      if (start_time) quiz.start_time = start_time;
-      if (end_time) quiz.end_time = end_time;
       if (duration) quiz.duration = duration;
 
       if (subject_id) {
@@ -158,9 +196,7 @@ export class QuizService {
 
           await question.save({ transaction });
 
-
           totalScore += question.score; // Use the score provided for QA
-
 
           // Handle options for MCQS type
           if (quiz.quiz_type === QuizType.MCQS && questionDto.options) {
@@ -218,9 +254,6 @@ export class QuizService {
       throw error;
     }
   }
-
-
-
 
 
   async findAllQuizByLevel(req): Promise<Quiz[]> {

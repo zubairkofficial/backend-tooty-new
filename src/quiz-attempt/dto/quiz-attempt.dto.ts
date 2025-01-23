@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 
 class AnswerDto {
   @IsInt()
+  @IsOptional()
   question_id: number;
 
   @IsOptional()
@@ -22,5 +23,6 @@ export class SubmitQuizAttemptDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AnswerDto)
+  @IsOptional()
   answers: AnswerDto[];
 }
