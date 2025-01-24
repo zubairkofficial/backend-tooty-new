@@ -23,8 +23,8 @@ export class QuizController {
   @Delete(':quizId')
   @Roles(Role.TEACHER, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async deleteQuiz(@Param('quizId') quizId: number){
-    return await this.quizService.deleteQuiz(Number(quizId));
+  async deleteQuiz(@Param('quizId') quizId: number) {
+    return this.quizService.deleteQuiz(Number(quizId));
   }
 
 
@@ -32,11 +32,11 @@ export class QuizController {
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async editQuiz(
-    
+
     @Body() editQuizDto: EditQuizDto,
     @Req() req: any,
   ): Promise<Quiz> {
-    return await this.quizService.editQuiz(editQuizDto, req);
+    return this.quizService.editQuiz(editQuizDto, req);
   }
 
 
@@ -55,11 +55,10 @@ export class QuizController {
   async findAllQuizByLevel(@Req() req: any): Promise<Quiz[]> {
     return this.quizService.findAllQuizByLevel(req);
   }
-
   @Get(':id')
   @Roles(Role.TEACHER, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async findOne(@Param('id') id: number): Promise<Quiz> {
-    return await this.quizService.findOne(id);
+  async findOne(@Param('id') id: number, @Req() req: any) {
+    return this.quizService.findOne(id, req);
   }
 }

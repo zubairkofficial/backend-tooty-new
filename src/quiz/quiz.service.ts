@@ -1,5 +1,5 @@
 // src/services/Quiz.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, HttpException, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { Level } from 'src/level/entity/level.entity';
@@ -10,6 +10,8 @@ import { Option } from 'src/option/entities/option.entity';
 import { QuizType } from 'src/utils/quizType.enum';
 import { Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript'
+import { Role } from 'src/utils/roles.enum';
+import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
 
 @Injectable()
 export class QuizService {
@@ -27,7 +29,7 @@ export class QuizService {
     private readonly sequelize: Sequelize,
   ) { }
 
-  async create(createQuizDto: CreateQuizDto, req: any): Promise<Quiz> {
+  async create(createQuizDto: CreateQuizDto, req: any) {
     const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
     console.log("quiz", createQuizDto);
 
@@ -109,7 +111,7 @@ export class QuizService {
   }
 
 
-  async editQuiz(editQuizDto: EditQuizDto, req: any): Promise<Quiz> {
+  async editQuiz(editQuizDto: EditQuizDto, req: any) {
     const transaction = await this.sequelize.transaction();
 
     try {
@@ -139,7 +141,7 @@ export class QuizService {
           throw new BadRequestException('start_time must be greater than or equal to the current UTC date');
         }
 
-      
+
         quiz.start_time = start_time;
       }
 
@@ -256,15 +258,26 @@ export class QuizService {
   }
 
 
-  async findAllQuizByLevel(req): Promise<Quiz[]> {
+  async findAllQuizByLevel(req) {
     if (req.user.level_id == null) {
       throw new Error("Level is not assigned to user")
-      return
+
     }
     const data = await this.quizModel.findAll({
       include: [{
         model: Subject
+      }, {
+        model: QuizAttempt,
+        required: false, // This allows for quizzes without attempts to be included
+        where: {
+          student_id: {
+            [Op.eq]: req.user.sub
+          },
+        }
       }],
+      order: [
+        ["id", "DESC"]
+      ],
       where: {
         level_id: {
           [Op.eq]: req.user.level_id
@@ -275,7 +288,7 @@ export class QuizService {
     return data
   }
 
-  async findAll(req: any): Promise<Quiz[]> {
+  async findAll(req: any) {
     const data = await this.quizModel.findAll({
       include: [
         { model: Level, attributes: ['id', 'level'] },
@@ -318,17 +331,41 @@ export class QuizService {
 
   }
 
-  async findOne(id: number): Promise<Quiz> {
-    const quiz = await this.quizModel.findByPk(id, {
-      include: [
-        { model: Level, attributes: ['id', 'level'] },
-        { model: Subject, attributes: ['id', 'title'] },
-        { model: Question, include: [Option] },
-      ],
-    });
-    if (!quiz) {
-      throw new NotFoundException(`Quiz with ID ${id} not found`);
+  async findOne(quiz_id: number, req: any) {
+    try {
+      if (req.user.role === Role.USER) {
+        const quizAttemptExist = await QuizAttempt.findOne({
+          where: {
+            student_id: req.user.sub,
+            quiz_id: quiz_id,
+          },
+        });
+
+        if (quizAttemptExist && quizAttemptExist.submitted) {
+          throw new ForbiddenException('Quiz has already been submitted.');
+        }
+      }
+
+      const quiz = await this.quizModel.findByPk(quiz_id, {
+        include: [
+          { model: Level, attributes: ['id', 'level'] },
+          { model: Subject, attributes: ['id', 'title'] },
+          { model: Question, include: [Option] },
+        ],
+      });
+
+      if (!quiz) {
+        throw new NotFoundException(`Quiz with ID ${quiz_id} not found.`);
+      }
+
+      return quiz;
+    } catch (error) {
+      // Re-throw the error if it's already an HTTP exception
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      // Wrap other errors in a generic InternalServerErrorException
+      throw new InternalServerErrorException(error.message || 'Unable to get quiz.');
     }
-    return quiz;
   }
 }

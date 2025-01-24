@@ -28,6 +28,19 @@ export class QuizAttempt extends Model<QuizAttempt> {
   })
   student_id: number;
 
+  @Default(false)
+  @Column({
+    type: DataType.BOOLEAN,
+  })
+  submitted: boolean
+
+  @Default(0)
+  @Column({
+    type: DataType.INTEGER,
+  })
+  quiz_time_consumed: number
+
+  @Default(0)
   @Column({
     type: DataType.FLOAT,
     allowNull: false,
