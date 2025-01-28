@@ -1,5 +1,5 @@
 // src/services/Quiz.service.ts
-import { Injectable, BadRequestException, NotFoundException, HttpException, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, HttpException, InternalServerErrorException, ForbiddenException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { Level } from 'src/level/entity/level.entity';
@@ -30,84 +30,88 @@ export class QuizService {
   ) { }
 
   async create(createQuizDto: CreateQuizDto, req: any) {
-    const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
-    console.log("quiz", createQuizDto);
+    try {
+      const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
+      console.log("quiz", createQuizDto);
 
-    // Parse the incoming dates as UTC
-    const quizStartTime = new Date(`${start_time}T00:00:00Z`);
-    const quizEndTime = new Date(`${end_time}T00:00:00Z`);
+      // Parse the incoming dates as UTC
+      const quizStartTime = new Date(`${start_time}T00:00:00Z`);
+      const quizEndTime = new Date(`${end_time}T00:00:00Z`);
 
-    // Get the current UTC date (without time)
-    const now = new Date();
-    const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      // Get the current UTC date (without time)
+      const now = new Date();
+      const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-    // Check if the quiz start time is in the past (compared to UTC date only)
-    if (quizStartTime < currentUTCDate) {
-      throw new Error("start_time must be greater than or equal to the current UTC date");
-    }
+      // Check if the quiz start time is in the past (compared to UTC date only)
+      if (quizStartTime < currentUTCDate) {
+        throw new Error("start_time must be greater than or equal to the current UTC date");
+      }
 
-    // Check if start_time is greater than or equal to end_time
-    if (quizStartTime >= quizEndTime) {
-      throw new BadRequestException('Start time must be before end time');
-    }
+      // Check if start_time is greater than or equal to end_time
+      if (quizStartTime >= quizEndTime) {
+        throw new BadRequestException('Start time must be before end time');
+      }
 
-    // Check if level and subject exist
-    const level = await this.levelModel.findByPk(req.user.level_id);
-    if (!level) {
-      throw new NotFoundException(`Level with ID ${req.user.level_id} not found`);
-    }
+      // Check if level and subject exist
+      const level = await this.levelModel.findByPk(req.user.level_id);
+      if (!level) {
+        throw new NotFoundException(`Level with ID ${req.user.level_id} not found`);
+      }
 
-    const subject = await this.subjectModel.findByPk(subject_id);
-    if (!subject) {
-      throw new NotFoundException(`Subject with ID ${subject_id} not found`);
-    }
+      const subject = await this.subjectModel.findByPk(subject_id);
+      if (!subject) {
+        throw new NotFoundException(`Subject with ID ${subject_id} not found`);
+      }
 
-    // Initialize total score
-    let totalScore = 0;
+      // Initialize total score
+      let totalScore = 0;
 
-    // Create the quiz
-    const quiz = await this.quizModel.create({
-      title,
-      description,
-      quiz_type: quiz_type === QuizType.MCQS ? QuizType.MCQS : QuizType.QA,
-      start_time: start_time,
-      end_time: end_time,
-      duration,
-      level_id: req.user.level_id,
-      subject_id,
-      teacher_id: req.user.sub,
-    });
-
-    // Add questions and options
-    for (const questionDto of questions) {
-      // Create question with score from the DTO
-      const question = await this.questionModel.create({
-        text: questionDto.text,
-        question_type: questionDto.questionType === "multiple-choice" ? QuizType.MCQS : QuizType.QA,
-        quiz_id: quiz.id,
-        score: questionDto.score, // Add the score for the question
+      // Create the quiz
+      const quiz = await this.quizModel.create({
+        title,
+        description,
+        quiz_type: quiz_type === QuizType.MCQS ? QuizType.MCQS : QuizType.QA,
+        start_time: start_time,
+        end_time: end_time,
+        duration,
+        level_id: req.user.level_id,
+        subject_id,
+        teacher_id: req.user.sub,
       });
 
-      totalScore += questionDto.score;
-      question.score = questionDto.score;
+      // Add questions and options
+      for (const questionDto of questions) {
+        // Create question with score from the DTO
+        const question = await this.questionModel.create({
+          text: questionDto.text,
+          question_type: questionDto.questionType === "multiple-choice" ? QuizType.MCQS : QuizType.QA,
+          quiz_id: quiz.id,
+          score: questionDto.score, // Add the score for the question
+        });
 
-      if (quiz.quiz_type === QuizType.MCQS) {
-        // Add options for multiple-choice questions
-        for (const optionDto of questionDto.options) {
-          await this.optionModel.create({
-            text: optionDto.text,
-            is_correct: optionDto.isCorrect,
-            question_id: question.id,
-          });
+        totalScore += questionDto.score;
+        question.score = questionDto.score;
+
+        if (quiz.quiz_type === QuizType.MCQS) {
+          // Add options for multiple-choice questions
+          for (const optionDto of questionDto.options) {
+            await this.optionModel.create({
+              text: optionDto.text,
+              is_correct: optionDto.isCorrect,
+              question_id: question.id,
+            });
+          }
         }
       }
+
+      // Update quiz total score
+      quiz.total_score = totalScore;
+      await quiz.save();
+
+      return quiz;
+    } catch (error) {
+      throw new HttpException(error.message || 'Failed to create quiz', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    // Update quiz total score
-    quiz.total_score = totalScore;
-    await quiz.save();
-
-    return quiz;
   }
 
 
@@ -253,62 +257,70 @@ export class QuizService {
       return quiz;
     } catch (error) {
       await transaction.rollback();
-      throw error;
+      throw new HttpException(error.message || 'Failed to edit quiz', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
 
   async findAllQuizByLevel(req) {
-    if (req.user.level_id == null) {
-      throw new Error("Level is not assigned to user")
+    try {
+      if (req.user.level_id == null) {
+        throw new Error("Level is not assigned to user")
 
-    }
-    const data = await this.quizModel.findAll({
-      include: [{
-        model: Subject
-      }, {
-        model: QuizAttempt,
-        required: false, // This allows for quizzes without attempts to be included
+      }
+      const data = await this.quizModel.findAll({
+        include: [{
+          model: Subject
+        }, {
+          model: QuizAttempt,
+          required: false, // This allows for quizzes without attempts to be included
+          where: {
+            student_id: {
+              [Op.eq]: req.user.sub
+            },
+          }
+        }],
+        order: [
+          ["id", "DESC"]
+        ],
         where: {
-          student_id: {
-            [Op.eq]: req.user.sub
-          },
-        }
-      }],
-      order: [
-        ["id", "DESC"]
-      ],
-      where: {
-        level_id: {
-          [Op.eq]: req.user.level_id
-        }
-      },
-    });
+          level_id: {
+            [Op.eq]: req.user.level_id
+          }
+        },
+      });
 
-    return data
+      return data
+    } catch (error) {
+      throw new HttpException(error.message || 'Failed to fetch quizzes by level', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async findAll(req: any) {
-    const data = await this.quizModel.findAll({
-      include: [
-        { model: Level, attributes: ['id', 'level'] },
-        { model: Subject, attributes: ['id', 'title'] },
-        // {
-        //   model: Question, include: [{
-        //     model: Option,
-        //     attributes: ["id", "text"]
-        //   }]
-        // },
-      ],
-      where: {
-        teacher_id: {
-          [Op.eq]: req.user.sub
-        }
-      },
+    try {
+      const data = await this.quizModel.findAll({
+        include: [
+          { model: Level, attributes: ['id', 'level'] },
+          { model: Subject, attributes: ['id', 'title'] },
+          // {
+          //   model: Question, include: [{
+          //     model: Option,
+          //     attributes: ["id", "text"]
+          //   }]
+          // },
+        ],
+        where: {
+          teacher_id: {
+            [Op.eq]: req.user.sub
+          }
+        },
 
-    });
+      });
 
-    return data
+      return data
+    } catch (error) {
+      throw new HttpException(error.message || 'Failed to fetch quizzes', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async deleteQuiz(id: number) {
@@ -326,7 +338,7 @@ export class QuizService {
         message: "Quiz deleted Successfully"
       }
     } catch (error) {
-      throw new Error("Failed to delete quiz")
+      throw new HttpException(error.message || 'Failed to delete quiz', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
   }
@@ -365,7 +377,7 @@ export class QuizService {
         throw error;
       }
       // Wrap other errors in a generic InternalServerErrorException
-      throw new InternalServerErrorException(error.message || 'Unable to get quiz.');
+      throw new HttpException(error.message || 'Unable to get quiz.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

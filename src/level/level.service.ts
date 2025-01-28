@@ -1,7 +1,7 @@
 import { CreateLevelDto, GetLevelDto, UpdateLevelDto } from './dto/level.dto';
 import { Level } from './entity/level.entity';
 import { Op } from 'sequelize';
-import { Logger } from '@nestjs/common';
+import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginate } from 'src/utils/pagination.utils';
 
@@ -13,7 +13,7 @@ export class LevelService {
             const level_data = await Level.findByPk(getLevelDto.level_id);
 
             if (!level_data) {
-                throw new Error(`Level with id ${getLevelDto.level_id} not found`);
+                throw new HttpException(`Level with id ${getLevelDto.level_id} not found`, HttpStatus.NOT_FOUND);
             }
 
             return {
@@ -22,7 +22,7 @@ export class LevelService {
             };
         } catch (error) {
             this.logger.error(`Failed to get level: ${error.message}`, error.stack);
-            throw new Error(`Failed to get level: ${error.message}`);
+            throw new HttpException(error.message || 'Failed to get level', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -36,7 +36,7 @@ export class LevelService {
             if (page && limit) {
                 // Pagination logic
                 if (page < 1 || limit < 1) {
-                    throw new Error('Page and limit must be greater than or equal to 1');
+                    throw new HttpException('Page and limit must be greater than or equal to 1', HttpStatus.BAD_REQUEST);
                 }
 
                 const offset = (page - 1) * limit;
@@ -65,7 +65,6 @@ export class LevelService {
                 total = levels.length;
             }
 
-
             // Use the paginate helper function to structure the response
             const infoLevel = paginate(levels, total, page || 1, limit || total);
 
@@ -75,11 +74,9 @@ export class LevelService {
             };
         } catch (error) {
             this.logger.error(`Failed to get all levels: ${error.message}`, error.stack);
-            throw new Error(`Failed to get all levels: ${error.message}`);
+            throw new HttpException(error.message || 'Failed to get all levels', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-
 
     async updateLevel(updateLevelDto: UpdateLevelDto, req: any) {
         try {
@@ -95,7 +92,7 @@ export class LevelService {
             });
 
             if (updated === 0) {
-                throw new Error(`Level with id ${updateLevelDto.level} not found`);
+                throw new HttpException(`Level with id ${updateLevelDto.level} not found`, HttpStatus.NOT_FOUND);
             }
 
             return {
@@ -104,7 +101,7 @@ export class LevelService {
             };
         } catch (error) {
             this.logger.error(`Failed to update level: ${error.message}`, error.stack);
-            throw new Error(`Failed to update level: ${error.message}`);
+            throw new HttpException(error.message || 'Failed to update level', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -122,7 +119,7 @@ export class LevelService {
             };
         } catch (error) {
             this.logger.error(`Failed to create new level: ${error.message}`, error.stack);
-            throw new Error(`Failed to create new level: ${error.message}`);
+            throw new HttpException(error.message || 'Failed to create new level', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

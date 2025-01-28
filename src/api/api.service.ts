@@ -2,7 +2,7 @@ import { Op } from "sequelize";
 import { GetVoiceModelDto, UpdateApiKeyDto } from "./dto/update-api.dto";
 import axios from "axios";
 import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
-
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 export class ApiService {
 
@@ -15,7 +15,7 @@ export class ApiService {
                 data: response?.data
             }
         } catch (error) {
-            throw new Error("failed gettting model")
+            throw new HttpException(error.message || "Failed getting model", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -36,7 +36,7 @@ export class ApiService {
                 api: response?.data
             }
         } catch (error) {
-            throw new Error("failed gettting models")
+            throw new HttpException(error.message || "Failed getting models", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -50,7 +50,7 @@ export class ApiService {
                 api: data
             }
         } catch (error) {
-            throw new Error("failed gettting api key")
+            throw new HttpException(error.message || "Failed getting API key", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -68,7 +68,7 @@ export class ApiService {
                 apis: data
             }
         } catch (error) {
-            throw new Error("failed gettting api keys")
+            throw new HttpException(error.message || "Failed getting API keys", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -116,7 +116,7 @@ export class ApiService {
                 message: "api updated successfully"
             }
         } catch (error) {
-            throw new Error("failed updating api key")
+            throw new HttpException(error.message || "Failed updating API key", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }

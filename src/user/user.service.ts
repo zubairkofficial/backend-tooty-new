@@ -36,9 +36,10 @@ import { Response } from 'express';
 import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 export class UserService {
-  constructor(private readonly logger = new Logger('UserService'),
+  constructor(private readonly logger = new Logger('UserService')
 
   ) { }
 
@@ -319,50 +320,63 @@ export class UserService {
   async deleteTeacher(deleteUserDto: DeleteUserDto) {
     try {
 
-      await JoinTeacherSubjectLevel.destroy({
+      await User.destroy({
         where: {
-          teacher_id: {
+          id: {
             [Op.eq]: deleteUserDto.user_id
           }
         }
-      }).then(async () => {
-        await TeacherProfile.destroy({
-          where: {
-            user_id: {
-              [Op.eq]: deleteUserDto.user_id
-            }
-          }
-        }).then(async () => {
-          await Otp.destroy({
-            where: {
-              user_id: {
-                [Op.eq]: deleteUserDto.user_id
-              }
-            }
-          })
-          await Chat.destroy({
-            where: {
-              user_id: {
-                [Op.eq]: deleteUserDto.user_id
-              }
-            }
-          })
-          await RefreshToken.destroy({
-            where: {
-              user_id: {
-                [Op.eq]: deleteUserDto.user_id
-              }
-            }
-          })
-          await User.destroy({
-            where: {
-              id: {
-                [Op.eq]: deleteUserDto.user_id
-              }
-            }
-          })
-        })
       })
+
+      // const join_teacher_suject_level = await JoinTeacherSubjectLevel.findAll({
+      //   where: {
+      //     teacher_id: {
+      //       [Op.eq]: deleteUserDto.user_id
+      //     }
+      //   }
+      // })
+      // if (join_teacher_suject_level.length > 0) {
+      //   await JoinTeacherSubjectLevel.destroy({
+      //     where: {
+      //       teacher_id: {
+      //         [Op.eq]: deleteUserDto.user_id
+      //       }
+      //     }
+      //   })
+      // }
+
+
+      // await TeacherProfile.destroy({
+      //   where: {
+      //     user_id: {
+      //       [Op.eq]: deleteUserDto.user_id
+      //     }
+      //   }
+      // }).then(async () => {
+      //   await Otp.destroy({
+      //     where: {
+      //       user_id: {
+      //         [Op.eq]: deleteUserDto.user_id
+      //       }
+      //     }
+      //   })
+      //   await Chat.destroy({
+      //     where: {
+      //       user_id: {
+      //         [Op.eq]: deleteUserDto.user_id
+      //       }
+      //     }
+      //   })
+      //   await RefreshToken.destroy({
+      //     where: {
+      //       user_id: {
+      //         [Op.eq]: deleteUserDto.user_id
+      //       }
+      //     }
+      //   })
+
+      // })
+
 
 
       return {
@@ -479,81 +493,117 @@ export class UserService {
 
 
   async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
+
     try {
-      // Check if the user already exists
-      const existingUser = await User.findOne({
-        where: { email: createUserByAdminDto.email },
-      });
-
-      if (existingUser) {
-        return {
-          message: 'User already exists',
-          statusCode: 1000,
-          user: {
-            isVerified: existingUser.isVerified,
-          },
-        };
-      }
-
-      // Validate role-specific fields before creating anything
-      if (createUserByAdminDto.role === Role.USER) {
-        if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
-          throw new Error('Failed to create Student: level and parent are required');
-        }
-      }
-
-      if (createUserByAdminDto.role === Role.TEACHER) {
-        if (!createUserByAdminDto.level_id) {
-          throw new Error('Failed to create Teacher: level/grade is required');
-        }
-      }
-
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
-
-      // Create the user
-      const user = await User.create({
-        name: createUserByAdminDto.name,
-        email: createUserByAdminDto.email,
-        password: hashedPassword,
-        contact: createUserByAdminDto.contact,
-        role: createUserByAdminDto.role,
-        isVerified: true,
-      });
-
-      // Create role-specific profiles
-      if (createUserByAdminDto.role === Role.USER) {
-        await StudentProfile.create({
-          level_id: createUserByAdminDto.level_id,
-          user_id: user.id,
-          user_roll_no: createUserByAdminDto.user_roll_no,
-          id: user.id,
-          school_id: req.user.school_id,
-          parent_id: createUserByAdminDto.parent_id,
-        });
-      } else if (createUserByAdminDto.role === Role.TEACHER) {
-        const teacher = await TeacherProfile.create({
-          user_id: user.id,
-          id: user.id,
-          title: '',
-          level_id: createUserByAdminDto.level_id,
-          school_id: req.user.school_id,
+      let user: User;
+      try {
+        // Check if the user already exists
+        const existingUser = await User.findOne({
+          where: { email: createUserByAdminDto.email },
+          paranoid: false
         });
 
-        // Create join records for teacher subjects
-        for (const subjectId of createUserByAdminDto.subjects) {
-          await JoinTeacherSubjectLevel.create({
+        if (existingUser) {
+          throw new Error("User with email already exist")
+        }
+
+        // Validate role-specific fields before creating anything
+        if (createUserByAdminDto.role === Role.USER) {
+          if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
+            throw new Error('Failed to create Student: level and parent are required');
+          }
+        }
+
+        if (createUserByAdminDto.role === Role.TEACHER) {
+          if (!createUserByAdminDto.level_id) {
+            throw new Error('Failed to create Teacher: level/grade is required');
+          }
+        }
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
+
+        // Create the user
+        user = await User.create({
+          name: createUserByAdminDto.name,
+          email: createUserByAdminDto.email,
+          password: hashedPassword,
+          contact: createUserByAdminDto.contact,
+          role: createUserByAdminDto.role,
+          isVerified: true,
+        });
+
+        // Create role-specific profiles
+        if (createUserByAdminDto.role === Role.USER) {
+          await StudentProfile.create({
             level_id: createUserByAdminDto.level_id,
-            subject_id: subjectId,
-            teacher_id: teacher.id,
+            user_id: user.id,
+            user_roll_no: createUserByAdminDto.user_roll_no,
+            id: user.id,
+            school_id: req.user.school_id,
+            parent_id: createUserByAdminDto.parent_id,
+          });
+        } else if (createUserByAdminDto.role === Role.TEACHER) {
+          const teacher = await TeacherProfile.create({
+            user_id: user.id,
+            id: user.id,
+            title: '',
+            level_id: createUserByAdminDto.level_id,
+            school_id: req.user.school_id,
+          });
+
+          // Create join records for teacher subjects
+          for (const subjectId of createUserByAdminDto.subjects) {
+            await JoinTeacherSubjectLevel.create({
+              level_id: createUserByAdminDto.level_id,
+              subject_id: subjectId,
+              teacher_id: teacher.id,
+            });
+          }
+        } else if (createUserByAdminDto.role === Role.PARENT) {
+          await ParentProfile.create({
+            user_id: user.id,
+            id: user.id,
+            school_id: req.user.school_id,
           });
         }
-      } else if (createUserByAdminDto.role === Role.PARENT) {
-        await ParentProfile.create({
-          user_id: user.id,
-          id: user.id,
-          school_id: req.user.school_id,
+
+
+      } catch (error) {
+
+        throw new Error("Error Creating User" + error.message)
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: `${process.env.EMAIL_HOST}`,
+        port: Number(`${process.env.EMAIL_PORT}`),
+        secure: false,
+        auth: {
+          user: `${process.env.EMAIL_USERNAME}`,
+          pass: `${process.env.EMAIL_PASSWORD}`,
+        },
+      });
+
+      try {
+        // Send email
+        await transporter.sendMail({
+          from: `${process.env.EMAIL_FROM_ADDRESS}`,
+          to: user.email, // Use the provided email
+          subject: `Tooty for ${user.role}`,
+          text: `Congratulations!
+              Your Tooty account has been created. Credentials are given below
+
+              email: ${user.email}
+              password:  ${createUserByAdminDto.password}
+        `,
+          html: ` <p>Congratulations! Tooty Account has been created Successfully
+                  <strong>email: ${user.email}</strong>
+                  <strong>password:  ${createUserByAdminDto.password}</strong>
+                </p>`,
         });
+
+      } catch (error) {
+        throw new Error("account creation email send failed")
       }
 
       // Return success response

@@ -1,9 +1,9 @@
-
 import { Op } from 'sequelize';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { Chat } from './entities/chat.entity';
 import { BotService } from 'src/bot/bot.service';
 import { FetchChatDto, FetchChatHistoryDto } from './dto/fetch-chat.dto';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 export class ChatService {
     constructor(
@@ -30,7 +30,7 @@ export class ChatService {
                 data: data
             }
         } catch (error) {
-            throw new Error("error fetching chats history")
+            throw new HttpException(error.message || 'Error fetching chats history', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -53,7 +53,7 @@ export class ChatService {
                 data: data
             }
         } catch (error) {
-            throw new Error("error fetching chats")
+            throw new HttpException(error.message || 'Error fetching chats', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -76,7 +76,7 @@ export class ChatService {
 
         } catch (error) {
             console.log(error)
-            throw new Error('error creating message')
+            throw new HttpException(error.message || 'Error creating message', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

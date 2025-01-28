@@ -1,4 +1,4 @@
-import { HttpStatus, Logger } from "@nestjs/common";
+import { HttpStatus, Logger, HttpException } from "@nestjs/common";
 import { CreateBotDto, DeleteBotDto, GetBotByLevelSubject, GetBotBySubjectDto, GetBotDto, QueryBot, UpdateBotDto } from "./dto/create-bot.dto";
 import { Bot } from "./entities/bot.entity";
 import { CreateBotContextDto, DeleteBotContextDto, GetBotContextDto, UpdateBotContextDto } from "./dto/create-Join-bot-data.dto";
@@ -106,7 +106,7 @@ export class BotService {
             }
         } catch (error) {
             console.log("an error occured while generating image", error)
-            throw new Error("an error occured while generating image")
+            throw new HttpException(error.message || "An error occurred while generating image", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -162,7 +162,7 @@ export class BotService {
             return result
         } catch (error) {
             console.log("an error ocured in download image fnc", error)
-            return ""
+            throw new HttpException(error.message || "An error occurred while downloading image", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -489,7 +489,7 @@ export class BotService {
             }
         } catch (error: any) {
             console.log("Error:", error);
-            throw new Error("Error querying bot: " + error.message);
+            throw new HttpException(error.message || "Error querying bot", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -539,7 +539,7 @@ export class BotService {
         } catch (error) {
             console.log("chat history deletion error", error);
             client.release();
-            throw new Error('Failed Deleting Chat History');
+            throw new HttpException(error.message || 'Failed Deleting Chat History', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }
@@ -570,7 +570,7 @@ export class BotService {
                 message: "bot updated successfully"
             }
         } catch (error) {
-            throw new Error("Error updating bot in DB")
+            throw new HttpException(error.message || "Error updating bot in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -626,8 +626,8 @@ export class BotService {
             return
         } catch (error) {
             console.log(error)
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ error: "Error creating bot in DB" })
-            return
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ error: error.message || "Error creating bot in DB" });
+            return;
         }
     }
 
@@ -655,7 +655,7 @@ export class BotService {
             }
         } catch (error) {
             console.log(error)
-            throw new Error("Error deleting bot in DB")
+            throw new HttpException(error.message || "Error deleting bot in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -676,7 +676,7 @@ export class BotService {
 
             }
         } catch (error) {
-            throw new Error("Error getting bot_contextData in DB")
+            throw new HttpException(error.message || "Error getting bot_contextData in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -701,7 +701,7 @@ export class BotService {
 
 
         } catch (error) {
-            throw new Error("Error created bot_contextData in DB")
+            throw new HttpException(error.message || "Error deleting bot_contextData in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -718,7 +718,7 @@ export class BotService {
 
 
         } catch (error) {
-            throw new Error("Error created bot_contextData in DB")
+            throw new HttpException(error.message || "Error creating bot_contextData in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -742,7 +742,7 @@ export class BotService {
                 message: "bot_contextData updated successfully"
             }
         } catch (error) {
-            throw new Error("Error updating bot_contextData in DB")
+            throw new HttpException(error.message || "Error updating bot_contextData in DB", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -770,7 +770,7 @@ export class BotService {
             };
         } catch (error) {
             this.logger.error("Error fetching bots: ", error.message);
-            throw new Error("Error fetching bots from the database");
+            throw new HttpException(error.message || "Error fetching bots from the database", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -846,7 +846,7 @@ export class BotService {
             };
         } catch (error) {
             this.logger.error("Error fetching bots: ", error.message);
-            throw new Error("Error fetching bots from the database");
+            throw new HttpException(error.message || "Error fetching bots from the database", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -884,7 +884,7 @@ export class BotService {
             };
         } catch (error) {
             this.logger.error("Error fetching bots: ", error.message);
-            throw new Error("Error fetching bots from the database");
+            throw new HttpException(error.message || "Error fetching bots from the database", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -920,7 +920,7 @@ export class BotService {
             };
         } catch (error) {
             this.logger.error("Error fetching bots: ", error.message);
-            throw new Error("Error fetching bots from the database");
+            throw new HttpException(error.message || "Error fetching bots from the database", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -961,7 +961,7 @@ export class BotService {
                 bot: data
             }
         } catch (error) {
-            throw new Error("enable to get bot")
+            throw new HttpException(error.message || "Unable to get bot", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getBot(getBotDto: GetBotDto) {
@@ -973,7 +973,7 @@ export class BotService {
                 bot: bot
             }
         } catch (error) {
-            throw new Error("enable to get bot")
+            throw new HttpException(error.message || "Unable to get bot", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -998,7 +998,7 @@ export class BotService {
                 bot: bot
             }
         } catch (error) {
-            throw new Error("enable to get bot by level subject ids")
+            throw new HttpException(error.message || "Unable to get bot by level subject ids", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

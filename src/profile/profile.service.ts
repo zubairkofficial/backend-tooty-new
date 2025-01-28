@@ -20,7 +20,7 @@ import { Quiz } from 'src/quiz/entities/quiz.entity';
 import { Answer } from 'src/answer/entities/answer.entity';
 import { Question } from 'src/question/entities/question.entity';
 import { Option } from 'src/option/entities/option.entity';
-
+import * as nodemailer from 'nodemailer'
 
 export class ProfileService {
 
@@ -433,6 +433,9 @@ export class ProfileService {
     async createJoinTeacherSubjectLevel(createJoinTeacherSubjectLevelDto: CreateJoinTeacherSubjectLevel, req: any) {
         try {
             console.log('Input DTO:', createJoinTeacherSubjectLevelDto);
+            const user = await User.findByPk(createJoinTeacherSubjectLevelDto.teacher_id, {
+                attributes: ["email"]
+            })
 
             const createPromises = createJoinTeacherSubjectLevelDto.subject_id.map(async (id) => {
                 const existingJoin = await JoinTeacherSubjectLevel.findOne({
@@ -456,13 +459,49 @@ export class ProfileService {
 
             await Promise.all(createPromises);
 
+            const transporter = nodemailer.createTransport({
+                host: `${process.env.EMAIL_HOST}`,
+                port: Number(`${process.env.EMAIL_PORT}`),
+                secure: false,
+                auth: {
+                    user: `${process.env.EMAIL_USERNAME}`,
+                    pass: `${process.env.EMAIL_PASSWORD}`,
+                },
+            });
+
+            try {
+                // Send email
+                await transporter.sendMail({
+                    from: `${process.env.EMAIL_FROM_ADDRESS}`,
+                    to: user.email, // Use the provided email
+                    subject: `Subject Assignment at Tooty for Teachers`,
+                    text: `Congratulations!
+                          You have been assigned new Subjects.
+
+                          Log in to your account and see assigned Subjects in Subject section
+            
+                    `,
+                    html: ` <p>Congratulations! You have been assigned new responsibilities
+                            
+                            </p>
+                            <p>You have been assigned new Subjects. Log in to your account and see assigned Subjects in Subject section</p>
+                            `,
+                });
+
+            } catch (error) {
+                throw new Error("subject assignment email send failed")
+            }
+
             return {
                 statusCode: 200,
                 message: "Teacher-level-subject joins created successfully.",
             };
         } catch (error) {
             console.error('Error in createJoinTeacherSubjectLevel:', error);
-            throw new Error(error.message || "Error creating teacher-level-subject join");
+            throw new HttpException(
+                error.message || "Error creating teacher-level-subject join",
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
@@ -591,11 +630,7 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in getChildren:', error);
             throw new HttpException(
-                {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: "Error fetching children data.",
-                    details: error.message,
-                },
+                error.message || "Error fetching children data.",
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
@@ -670,11 +705,7 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in getChildrenById:', error);
             throw new HttpException(
-                {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: "Error fetching student profile.",
-                    details: error.message,
-                },
+                error.message || "Error fetching student profile.",
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
@@ -747,11 +778,7 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in getChildrenById:', error);
             throw new HttpException(
-                {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: "Error fetching student profile.",
-                    details: error.message,
-                },
+                error.message || "Error fetching student profile.",
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
@@ -781,11 +808,7 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in getStudentsByLevel:', error);
             throw new HttpException(
-                {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: "Error fetching students by level.",
-                    details: error.message,
-                },
+                error.message || "Error fetching students by level.",
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
@@ -831,11 +854,7 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in updateStudentProfile:', error);
             throw new HttpException(
-                {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: "Error updating student profile.",
-                    details: error.message,
-                },
+                error.message || "Error updating student profile.",
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }

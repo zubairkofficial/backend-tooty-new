@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { CreateFileDto, DeleteFileDto, GetFilesBySubjectDto } from './dto/create-contextData.dto';
 import { File } from './entities/file.entity';
 import { Op } from 'sequelize';
@@ -48,7 +48,7 @@ export class ContextDataService {
                 message: "success getting files"
             }
         } catch (error) {
-            throw new Error('error fetching file by subject')
+            throw new HttpException(error.message || 'Error fetching file by subject', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -110,7 +110,7 @@ export class ContextDataService {
                 message: 'Successfully fetched files',
             };
         } catch (error) {
-            throw new Error('Error fetching files');
+            throw new HttpException(error.message || 'Error fetching files', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -168,7 +168,7 @@ export class ContextDataService {
             return res
         } catch (error) {
             client.release()
-            throw new Error('Failed Deleting File')
+            throw new HttpException(error.message || 'Failed Deleting File', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -276,7 +276,7 @@ export class ContextDataService {
                 console.error('Error splitting PDF:', error);
                 onProgress(-1);
                 await this.fileDelete(file.path); // Use fileDelete
-                throw new Error('Failed to split PDF. Ensure the PDF contains selectable text.');
+                throw new HttpException(error.message || 'Failed to split PDF. Ensure the PDF contains selectable text.', HttpStatus.FAILED_DEPENDENCY);
             }
 
             console.log('Total docs:', docs.length);
@@ -389,7 +389,7 @@ export class ContextDataService {
         } catch (error) {
             console.error('Unhandled error:', error);
             await this.fileDelete(file.path); // Use fileDelete
-            throw error;
+            throw new HttpException(error.message || 'Error processing file', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
 
