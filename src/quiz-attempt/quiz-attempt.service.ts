@@ -34,7 +34,69 @@ export class QuizAttemptService {
     @InjectModel(Quiz)
     private readonly quizModel: typeof Quiz,
     private readonly sequelize: Sequelize,
-  ) {}
+  ) { }
+
+
+
+  async getQuizAttemptDetailById(params: any) {
+    try {
+      const quiz = await QuizAttempt.findOne({
+        where: {
+          id: {
+            [Op.eq]: params.attempt_id
+          }
+        },
+
+        include: [
+          {
+            model: Quiz,
+            as: 'quiz',
+
+          },
+          {
+            required: false,
+            model: Answer,
+            as: 'answers',
+
+            include: [
+              {
+                required: false,
+                model: Option
+              },
+              {
+
+                model: Question,
+                include: [{
+                  required: false,
+                  model: Option
+                }]
+              }]
+          },
+        ],
+      },);
+
+      if (!quiz) {
+        return {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: `No quiz attempt found for ID: ${params.attempt_id}`,
+        };
+      }
+
+
+
+      return {
+        statusCode: HttpStatus.OK,
+        data: quiz,
+      };
+    } catch (error) {
+      console.error('Error in getQuizAttemptDetailByQuizId:', error);
+      throw new HttpException(
+        error.message || "Error fetching quiz attempt details.",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+  }
 
   async createSubmitQuizAttempt(student_id: number, createSubmitQuizAttempt: CreateSubmitQuizAttemptDto) {
     const { quiz_id } = createSubmitQuizAttempt;
@@ -199,60 +261,64 @@ export class QuizAttemptService {
     subjectName: string,
     bot: string,
   ): Promise<number> {
-    const api = await SuperAdminProfile.findOne({
-      attributes: ['openai'],
-    });
-
-    if (!api) {
-      throw new HttpException('Unable to find API key', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    const api_key = api?.openai;
-
-    if (api_key !== '') {
-      const llm = new ChatOpenAI({
-        model: bot,
-        temperature: 0,
-        maxTokens: 1000,
-        timeout: 15000,
-        maxRetries: 2,
-        apiKey: api_key,
+    try {
+      const api = await SuperAdminProfile.findOne({
+        attributes: ['openai'],
       });
 
-      const template = `
-        You are an intelligent evaluator. Your task is to evaluate a student's answer for a given question based on the subject knowledge. Focus on the correctness of the concepts. Grammar is irrelevant unless it affects the meaning. 
-        - Check for the concepts explained in student's answer, give number according to that
-        **Expected Output Json Format**
-        {{
-          "question_obtained_marks": number
-        }}
+      if (!api) {
+        throw new HttpException('Unable to find API key', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
 
-        Rules:
-          - The question_obtained_marks must be a positive integer and equal to or less than QuestionTotalMarks: {questionTotalScore}.
-          - Use subjectName: {subjectName} to apply domain-specific knowledge for evaluation.
+      const api_key = api?.openai;
 
-        Input:
-          - Question: {question}
-          - Question Total Score: {questionTotalScore}
-          - Student's Answer: {answer}
-          - Subject Name: {subjectName}
+      if (api_key !== '') {
+        const llm = new ChatOpenAI({
+          model: bot,
+          temperature: 0,
+          maxTokens: 1000,
+          timeout: 15000,
+          maxRetries: 2,
+          apiKey: api_key,
+        });
 
-        Now evaluate the answer strictly as per the rules.
-      `;
+        const template = `
+          You are an intelligent evaluator. Your task is to evaluate a student's answer for a given question based on the subject knowledge. Focus on the correctness of the concepts. Grammar is irrelevant unless it affects the meaning. 
+          - Check for the concepts explained in student's answer, give number according to that
+          **Expected Output Json Format**
+          {{
+            "question_obtained_marks": number
+          }}
 
-      const AnswerGenrateTemplate = ChatPromptTemplate.fromMessages([['system', template]]);
-      const promptValue = await AnswerGenrateTemplate.invoke({
-        question: question,
-        questionTotalScore: questionTotalScore,
-        answer: answer,
-        subjectName: subjectName,
-      });
+          Rules:
+            - The question_obtained_marks must be a positive integer and equal to or less than QuestionTotalMarks: {questionTotalScore}.
+            - Use subjectName: {subjectName} to apply domain-specific knowledge for evaluation.
 
-      const llm_structured = llm.withStructuredOutput(outputSchema);
-      const result = await llm_structured.invoke(promptValue);
-      return result.question_obtained_marks;
-    } else {
-      throw new HttpException('OpenAI API key is missing', HttpStatus.INTERNAL_SERVER_ERROR);
+          Input:
+            - Question: {question}
+            - Question Total Score: {questionTotalScore}
+            - Student's Answer: {answer}
+            - Subject Name: {subjectName}
+
+          Now evaluate the answer strictly as per the rules.
+        `;
+
+        const AnswerGenrateTemplate = ChatPromptTemplate.fromMessages([['system', template]]);
+        const promptValue = await AnswerGenrateTemplate.invoke({
+          question: question,
+          questionTotalScore: questionTotalScore,
+          answer: answer,
+          subjectName: subjectName,
+        });
+
+        const llm_structured = llm.withStructuredOutput(outputSchema);
+        const result = await llm_structured.invoke(promptValue);
+        return result.question_obtained_marks;
+      } else {
+        throw new HttpException('OpenAI API key is missing', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    } catch (error) {
+      throw new HttpException(error.message || 'Failed to evaluate answer', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

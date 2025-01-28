@@ -111,7 +111,7 @@ export class UserService {
       };
     } catch (error) {
       this.logger.error('Error sending OTP', error);
-      throw new Error('Failed to send OTP');
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -218,10 +218,7 @@ export class UserService {
       if (error instanceof HttpException) {
         throw error; // Re-throw HttpException to send it to the frontend
       } else {
-        throw new HttpException(
-          'An error occurred while updating the profile',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
   }
@@ -269,7 +266,7 @@ export class UserService {
       };
     } catch (error) {
       console.log(error.message)
-      throw new Error(error.message || "Update of User profile failed")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
   }
@@ -313,7 +310,7 @@ export class UserService {
       };
 
     } catch (error) {
-      throw new Error("Update of User failed")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
   }
@@ -373,7 +370,7 @@ export class UserService {
         message: "success deleting user"
       }
     } catch (error) {
-      throw new Error("ERROR DELETING USER")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -403,7 +400,7 @@ export class UserService {
         message: "success deleting user"
       }
     } catch (error) {
-      throw new Error("ERROR DELETING USER")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   async deleteParent(deleteUserDto: DeleteUserDto) {
@@ -432,7 +429,7 @@ export class UserService {
         message: "success deleting parent"
       }
     } catch (error) {
-      throw new Error("ERROR DELETING Parent")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -575,7 +572,7 @@ export class UserService {
 
       // Return error response
       return {
-        message: 'An error occurred while creating the user.',
+        message: error.message || 'Internal Server Error',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         error: error.message || 'Internal Server Error',
       };
@@ -741,7 +738,7 @@ export class UserService {
         statusCode: 200,
       };
     } catch (error) {
-      throw new Error('Failed To LogOut');
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -980,7 +977,7 @@ export class UserService {
       };
     } catch (error) {
       console.log("error", error)
-      throw new Error('Error fetching users');
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -1022,7 +1019,7 @@ export class UserService {
       };
     } catch (error) {
       console.error("Error updating avatar:", error);
-      throw new Error("Error updating avatar");
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -1043,7 +1040,7 @@ export class UserService {
       }
 
     } catch (error) {
-      throw new Error("Error fetching students")
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateSchoolDto, UpdateSchoolDto } from './dto/school.dto';
 import { School } from './entities/school.entity';
@@ -43,7 +43,7 @@ export class SchoolsService {
       return school;
     } catch (error) {
       this.logger.error('Failed to create school', error.stack);
-      throw new Error('Failed to create school: ' + error.message);
+      throw new HttpException(error.message || 'Failed to create school', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -68,7 +68,7 @@ export class SchoolsService {
 
     } catch (error) {
       this.logger.error('Failed to fetch school', error.stack);
-      throw new Error('Failed to fetch school: ' + error.message);
+      throw new HttpException(error.message || 'Failed to fetch school', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   // Get all schools with pagination
@@ -85,7 +85,7 @@ export class SchoolsService {
       return { data: rows, total: count };
     } catch (error) {
       this.logger.error('Failed to fetch schools', error.stack);
-      throw new Error('Failed to fetch schools: ' + error.message);
+      throw new HttpException(error.message || 'Failed to fetch schools', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -113,7 +113,7 @@ export class SchoolsService {
       return school;
     } catch (error) {
       this.logger.error(`Failed to fetch school with ID ${id}`, error.stack);
-      throw new NotFoundException(`Failed to fetch school with ID ${id}: ${error.message}`);
+      throw new HttpException(error.message || `Failed to fetch school with ID ${id}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -127,7 +127,7 @@ export class SchoolsService {
       return school;
     } catch (error) {
       this.logger.error(`Failed to update school with ID ${id}`, error.stack);
-      throw new Error('Failed to update school: ' + error.message);
+      throw new HttpException(error.message || 'Failed to update school', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -230,7 +230,7 @@ export class SchoolsService {
       this.logger.log(`School with ID ${id} restored successfully`);
     } catch (error) {
       this.logger.error(`Failed to restore school with ID ${id}`, error.stack);
-      throw new Error('Failed to restore school: ' + error.message);
+      throw new HttpException(error.message || 'Failed to restore school', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

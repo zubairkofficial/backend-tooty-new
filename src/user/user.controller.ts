@@ -227,10 +227,9 @@ export class UserController {
   }
 
   @Put('update-profile')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER, Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
-
   @ApiOperation({ summary: 'Update user details' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   async updateProfile(@Body() updateUserDto: UpdateProfileDto, @Req() req: any) {

@@ -3,7 +3,7 @@ import { GetSubjectDto, UpdateSubjectDto, CreateSubjectDto, GetSubjectByLevelDto
 import { Subject } from './entity/subject.entity';
 import { Op } from 'sequelize';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { getErrorMessage } from 'src/utils/errors.utils';
+
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { User } from 'src/user/entities/user.entity';
 import { Level } from 'src/level/entity/level.entity';
@@ -58,7 +58,7 @@ export class SubjectService {
         data: subjects,
       };
     } catch (error) {
-      throw this.handleError(error, 4001);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -82,7 +82,7 @@ export class SubjectService {
         data: subjectsData,
       };
     } catch (error) {
-      throw this.handleError(error, 4002);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -99,7 +99,7 @@ export class SubjectService {
         throw new HttpException(
           {
             errorCode: 2001,
-            message: getErrorMessage(2001),
+            message: "Subject Not Found",
           },
           HttpStatus.NOT_FOUND,
         );
@@ -110,7 +110,7 @@ export class SubjectService {
         data: subject,
       };
     } catch (error) {
-      throw this.handleError(error, 4003);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -165,7 +165,7 @@ export class SubjectService {
         message: 'Successfully retrieved subjects',
       };
     } catch (error) {
-      throw this.handleError(error, 4004);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -231,7 +231,7 @@ export class SubjectService {
         message: 'Subject updated successfully',
       };
     } catch (error) {
-      throw this.handleError(error, 4005);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -270,21 +270,8 @@ export class SubjectService {
         message: 'Subject created successfully',
       };
     } catch (error) {
-      throw this.handleError(error, 4006);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  private handleError(error: any, errorCode: number): HttpException {
-    const message = getErrorMessage(errorCode);
-
-    console.error(`Error Code: ${errorCode}, Message: ${message}`, error);
-
-    return new HttpException(
-      {
-        errorCode,
-        message,
-      },
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
-  }
 }

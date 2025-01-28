@@ -1,5 +1,5 @@
 // src/quiz-attempt/quiz-attempt.controller.ts
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Param } from '@nestjs/common';
 import { QuizAttemptService } from './quiz-attempt.service';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
 import { CreateSubmitQuizAttemptDto, SubmitQuizAttemptDto } from './dto/quiz-attempt.dto';
@@ -10,6 +10,14 @@ import { Role } from 'src/utils/roles.enum';
 @Controller('quiz-attempt')
 export class QuizAttemptController {
   constructor(private readonly quizAttemptService: QuizAttemptService) { }
+
+
+  @Get('get-quiz-attempt-detail/:attempt_id')
+  @Roles(Role.TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getQuizAttemptDetailById(@Param() params: any) {
+    return this.quizAttemptService.getQuizAttemptDetailById(params);
+  }
 
 
   @Post('create-submition')

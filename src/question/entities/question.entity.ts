@@ -28,7 +28,7 @@ export class Question extends Model<Question> {
   correct_answer: string; // Stores the correct answer for Question-Answer type questions
 
 
-  @Default(0)
+  @Default(1)
   @Column({ type: DataType.FLOAT, allowNull: true })
   score: number; // Duration in minutes
 

@@ -26,14 +26,14 @@ export class ProfileController {
   async getChildren(@Req() req: any) {
     return this.profileServices.getChildren(req);
   }
- 
+
   @Get('get-children/:child_id')
   @Roles(Role.PARENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Super Admin Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
-  async getChildrenById(@Req() req: any,@Param() params) {
-    return this.profileServices.getChildrenById(params,req);
+  async getChildrenById(@Req() req: any, @Param() params) {
+    return this.profileServices.getChildrenById(params, req);
   }
 
   //Super admin management
@@ -66,7 +66,7 @@ export class ProfileController {
 
     return this.profileServices.getParentByID(Number(parent_id), req);
   }
-  
+
   // Admin Management
 
   @Get('get-all-admins')
@@ -97,6 +97,19 @@ export class ProfileController {
     return this.profileServices.updateAdmin(updateAdminProfileDto, req);
   }
   // Teacher Management
+
+
+ 
+
+  @Get('get-student/:student_id')
+  @Roles(Role.TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getStudentById(@Req() req: any, @Param() params) {
+    return this.profileServices.getStudentById(params, req);
+  }
+
   @Post('create-join-teacher-subject-level')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -119,7 +132,7 @@ export class ProfileController {
       };
     }
   }
-  
+
   @Delete('delete-join-teacher-subject-level')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -163,7 +176,7 @@ export class ProfileController {
       return profile;
     } catch (error) {
       console.error('Error fetching teacher profile:', error.message);
-  
+
       // Generic error response
       throw new HttpException(
         { message: 'Failed to retrieve teacher profile.', error: error.message },

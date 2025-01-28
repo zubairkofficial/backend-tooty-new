@@ -9,6 +9,19 @@ export class UpdateAdminProfileDto {
 
     @IsNumber()
     admin_id: number
+
+
+    @IsString()
+    @IsNotEmpty()
+    name: string
+
+    @IsString()
+    @IsNotEmpty()
+    email: string
+
+    @IsString()
+    @IsNotEmpty()
+    contact: string
 }
 
 export class UpdateSuperAdminDto {

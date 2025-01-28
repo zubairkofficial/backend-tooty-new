@@ -947,6 +947,9 @@ export class BotService {
                         school_id: {
                             [Op.eq]: req.user.school_id
                         }
+                    },
+                    attributes: {
+                        exclude: ["description", "ai_model", "voice_model", "school_id", "level_id", "subject_id", "user_id", "createdAt", "updatedAt", "deletedAt"]
                     }
                 })
                 return bot
