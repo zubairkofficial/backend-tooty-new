@@ -27,8 +27,6 @@ import { z } from "zod";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
 import { File } from "src/context_data/entities/file.entity";
-import { School } from "src/school/entities/school.entity";
-import { Role } from "src/utils/roles.enum";
 
 const retrieveSchema = z.object({ query: z.string() });
 
@@ -586,9 +584,7 @@ export class BotService {
                     subject_id: {
                         [Op.eq]: Number(createBotDto.subject_id)
                     },
-                    school_id: {
-                        [Op.eq]: Number(req.user.school_id)
-                    },
+                    
                     deletedAt: {
                         [Op.eq]: null
                     }
@@ -610,7 +606,7 @@ export class BotService {
                 bot_image_url: `${image.filename}`,
                 voice_model: createBotDto.voice_model,
                 subject_id: Number(createBotDto.subject_id),
-                school_id: req.user.school_id,
+               
                 display_name: createBotDto.display_name
             }).then(async (bot) => {
                 await Join_BotContextData.create({
@@ -756,9 +752,6 @@ export class BotService {
                 where: {
                     level_id: {
                         [Op.eq]: req?.user.level_id
-                    },
-                    school_id: {
-                        [Op.eq]: req?.user.school_id
                     }
                 }
             });
@@ -820,11 +813,7 @@ export class BotService {
                                     [Op.eq]: level_id,
                                 },
                             },
-                            {
-                                school_id: {
-                                    [Op.eq]: req.user.school_id,
-                                },
-                            },
+                           
                         ],
                     })),
                 },
@@ -854,18 +843,9 @@ export class BotService {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
-
-            // Determine the `where` condition based on the user's role
-            const whereCondition = req.user.role === Role.SUPER_ADMIN
-                ? {} // No condition for SUPERADMIN, fetch all bots
-                : { school_id: req.user.school_id }; // Restrict to user's school_id
-
+           
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
-                where: whereCondition, // Apply the dynamic condition
-                include: [{
-                    model: School, // Include related School model data
-                }],
                 limit, // Number of records to fetch
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
@@ -897,11 +877,7 @@ export class BotService {
 
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
-                where: {
-                    school_id: {
-                        [Op.eq]: req.user.school_id
-                    }
-                },
+              
                 limit, // Number of records to fetch
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
@@ -944,12 +920,10 @@ export class BotService {
                         level_id: {
                             [Op.eq]: teacher.level_id
                         },
-                        school_id: {
-                            [Op.eq]: req.user.school_id
-                        }
+                       
                     },
                     attributes: {
-                        exclude: ["description", "ai_model", "voice_model", "school_id", "level_id", "subject_id", "user_id", "createdAt", "updatedAt", "deletedAt"]
+                        exclude: ["description", "ai_model", "voice_model", "level_id", "subject_id", "user_id", "createdAt", "updatedAt", "deletedAt"]
                     }
                 })
                 return bot
@@ -987,9 +961,7 @@ export class BotService {
                     level_id: {
                         [Op.eq]: getBotByLevelSubject.level_id
                     },
-                    school_id: {
-                        [Op.eq]: req.user.school_id
-                    }
+                    
                 }
             })
 

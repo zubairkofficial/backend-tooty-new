@@ -19,7 +19,7 @@ export class BotController {
     constructor(private readonly botService: BotService) { }
 
     @Post('generate-image')
-    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN, Role.TEACHER)
+    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Generate image for bot' })
     @ApiResponse({ status: 200, description: 'Image generated successfully' })
@@ -28,7 +28,7 @@ export class BotController {
     }
 
     @Post('query-bot')
-    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN, Role.TEACHER)
+    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Query bot based on specific parameters' })
     @ApiResponse({ status: 200, description: 'Bot queried successfully' })
@@ -37,7 +37,7 @@ export class BotController {
     }
 
     @Post('create-bot')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @UseInterceptors(FileInterceptor('image', multerStorageConfig))
     @ApiOperation({ summary: 'Create a new bot' })
@@ -62,7 +62,7 @@ export class BotController {
     }
 
     @Put('update-bot')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Update bot details' })
     @ApiResponse({ status: 200, description: 'Bot updated successfully' })
@@ -71,7 +71,7 @@ export class BotController {
     }
 
     @Delete('delete-bot')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Delete a bot' })
     @ApiResponse({ status: 200, description: 'Bot deleted successfully' })
@@ -80,7 +80,7 @@ export class BotController {
     }
 
     @Post('create-join-bot-context')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Create a context for joining bot' })
     @ApiResponse({ status: 201, description: 'Bot context created successfully' })
@@ -89,7 +89,7 @@ export class BotController {
     }
 
     @Delete('delete-join-bot-context')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Delete context for bot' })
     @ApiResponse({ status: 200, description: 'Bot context deleted successfully' })
@@ -98,7 +98,7 @@ export class BotController {
     }
 
     @Put('update-join-bot-context')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Update bot join context' })
     @ApiResponse({ status: 200, description: 'Bot join context updated successfully' })
@@ -107,7 +107,7 @@ export class BotController {
     }
 
     @Post('get-join-bot-context')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Get bot join context' })
     @ApiResponse({ status: 200, description: 'Bot join context retrieved' })
@@ -152,13 +152,13 @@ export class BotController {
     async getAllBotsByTeacher(
         @Req() req: any,
         @Query('page') page?: number,
-        @Query('limit') limit?: number ,
+        @Query('limit') limit?: number,
     ) {
         return this.botService.getAllBotsByTeacher(req, page, limit);
     }
 
     @Get('get-all-bots')
-    @Roles(Role.SUPER_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.SUPER_INTENDENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Get all bots' })
     @ApiResponse({ status: 200, description: 'All bots retrieved' })
@@ -166,8 +166,8 @@ export class BotController {
     @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
     async getAllBots(
         @Req() req: any,
-        @Query('page') page?: number ,
-        @Query('limit') limit?: number ,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
     ) {
         return this.botService.getAllBots(req, page, limit);
     }
@@ -181,7 +181,7 @@ export class BotController {
     @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
     async getAllBotsByAdmin(
         @Req() req: any,
-        @Query('page') page?: number ,
+        @Query('page') page?: number,
         @Query('limit') limit?: number,
     ) {
         return this.botService.getAllBotsBySchool(req, page, limit);

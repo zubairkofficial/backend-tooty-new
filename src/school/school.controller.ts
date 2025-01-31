@@ -27,14 +27,14 @@ export class SchoolsController {
 
   // Create a new school
   @Post()
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Create a new school' })
   @ApiResponse({ status: HttpStatus.OK, description: 'School created successfully' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
-  async createSchool(@Body() createSchoolDto: CreateSchoolDto) {
+  async createSchool(@Body() createSchoolDto: CreateSchoolDto, @Req() req: any) {
     try {
-      const school = await this.schoolsService.createSchool(createSchoolDto);
+      const school = await this.schoolsService.createSchool(createSchoolDto, req);
       return { status: HttpStatus.OK, message: 'School created successfully', data: school };
     } catch (error) {
       throw new HttpException(
@@ -66,16 +66,17 @@ export class SchoolsController {
 
   // Get all schools with pagination
   @Get('get-all-schools')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get all schools' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Schools fetched successfully' })
   async getAllSchools(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Req() req: any
   ) {
     try {
-      const result = await this.schoolsService.getAllSchools(page, limit);
+      const result = await this.schoolsService.getAllSchools(page, limit, req);
       return { status: HttpStatus.OK, message: 'Schools fetched successfully', data: result };
     } catch (error) {
       throw new HttpException(
@@ -87,14 +88,14 @@ export class SchoolsController {
 
   // Get a school by ID
   @Get(':id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.USER)
+  @Roles(Role.SUPER_INTENDENT, Role.ADMIN, Role.TEACHER, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get a school by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'School fetched successfully' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'School not found' })
-  async getSchoolById(@Param('id') id: string) {
+  async getSchoolById(@Param('id') id: string, @Req() req: any) {
     try {
-      const school = await this.schoolsService.getSchoolById(+id);
+      const school = await this.schoolsService.getSchoolById(Number(id), req);
       return { status: HttpStatus.OK, message: 'School fetched successfully', data: school };
     } catch (error) {
       throw new HttpException(
@@ -106,7 +107,7 @@ export class SchoolsController {
 
   // Update a school by ID
   @Put(':id')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Update a school by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'School updated successfully' })

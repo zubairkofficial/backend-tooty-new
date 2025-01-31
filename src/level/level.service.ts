@@ -43,11 +43,7 @@ export class LevelService {
                 const result = await Level.findAndCountAll({
                     limit,
                     offset,
-                    where: {
-                        school_id: {
-                            [Op.eq]: req.user.school_id
-                        }
-                    },
+                  
                     raw: true,
                 });
                 levels = result.rows;
@@ -55,11 +51,7 @@ export class LevelService {
             } else {
                 // Return all levels if page and limit are not provided
                 levels = await Level.findAll({
-                    where: {
-                        school_id: {
-                            [Op.eq]: req.user.school_id
-                        }
-                    },
+                   
                     raw: true,
                 });
                 total = levels.length;
@@ -110,7 +102,7 @@ export class LevelService {
             await Level.create({
                 level: createLevelDto.level,
                 description: createLevelDto.description,
-                school_id: req.user.school_id
+               
             });
 
             return {

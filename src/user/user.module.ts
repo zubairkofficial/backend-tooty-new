@@ -15,9 +15,11 @@ import { RefreshToken } from './entities/refreshToken.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
+import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
+import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
 @Module({
-  imports: [SequelizeModule.forFeature([User, SuperAdminProfile, AdminProfile, TeacherProfile, StudentProfile, RefreshToken, Chat, School, ParentProfile]), ConfigModule],
+  imports: [SequelizeModule.forFeature([User, SuperAdminProfile, AdminProfile, TeacherProfile, StudentProfile, RefreshToken, Chat, School, ParentProfile, SuperIntendentProfile, JoinTeacherSubjectLevel]), ConfigModule],
   controllers: [UserController],
-  providers: [UserService,JwtService],
+  providers: [UserService, JwtService],
 })
 export class UserModule {}

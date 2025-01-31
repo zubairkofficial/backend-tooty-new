@@ -13,7 +13,6 @@ import {
 import { Bot } from '../../bot/entities/bot.entity';
 import { Join_BotContextData } from '../../bot/entities/join_botContextData.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
-import { School } from 'src/school/entities/school.entity';
 
 
 @Table({
@@ -28,12 +27,6 @@ export class File extends Model {
         type: DataType.INTEGER,
     })
     id: number;
-
-    @ForeignKey(() => School)
-    @Column({
-        type: DataType.INTEGER,
-    })
-    school_id: number;
 
     @ForeignKey(() => Subject)
     @Column({
@@ -57,9 +50,6 @@ export class File extends Model {
         type: DataType.STRING,
     })
     slug: string;
-
-    @BelongsTo(() => School, { onDelete: 'CASCADE' })
-    school!: School;
 
     @BelongsTo(() => Subject)
     subject!: Subject;

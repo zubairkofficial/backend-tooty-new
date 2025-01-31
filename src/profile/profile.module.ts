@@ -13,9 +13,12 @@ import { School } from 'src/school/entities/school.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { User } from 'src/user/entities/user.entity';
 import { ParentProfile } from './entities/parent-profile.entity';
+import { JoinSchoolAdmin } from 'src/school/entities/join-school-admin.entity';
+import { SuperIntendentProfile } from './entities/super-intendent-profile.entity';
+import { District } from 'src/district/entity/district.entity';
 
 @Module({
-    imports: [SequelizeModule.forFeature([SuperAdminProfile,StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, School, Subject,User, ParentProfile]), ConfigModule],
+    imports: [SequelizeModule.forFeature([SuperAdminProfile,StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, School, Subject,User, ParentProfile, JoinSchoolAdmin,SuperIntendentProfile, District]), ConfigModule],
     controllers: [ProfileController],
     providers: [ProfileService, JwtService]
 })

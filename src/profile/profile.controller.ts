@@ -1,21 +1,26 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';  // Swagger decorators
-import { UpdateStudentProfileDto } from './dto/update-profile.dto';
+import { UpdateStudentProfileDto, UpdateTeacherProfileDto } from './dto/update-profile.dto';
 import { ProfileService } from './profile.service';
 import { GetStudentProfileDto } from './dto/get-profile.dto';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
 import { RolesGuard } from 'src/guards/roles.guard';
-import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto, UpdateTeacherProfileDto } from './dto/teacher-profile.dto';
+import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto } from './dto/teacher-profile.dto';
 import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
+import { Sequelize } from 'sequelize-typescript';
 
 @ApiTags('Profile') // Grouping the routes for 'Profile'
 @ApiBearerAuth()  // Add this if you're using JWT authentication
 @Controller('profile')
 export class ProfileController {
 
-  constructor(private readonly profileServices: ProfileService) { }
+  constructor(private readonly profileServices: ProfileService,
+
+    private readonly sequelize: Sequelize
+
+  ) { }
 
 
   @Get('get-all-children')
@@ -69,8 +74,18 @@ export class ProfileController {
 
   // Admin Management
 
-  @Get('get-all-admins')
+  @Get('get-all-super-intendents')
   @Roles(Role.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Admin All Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved admin profile.' })
+  async getAllSuperIntendents(@Req() req: any) {
+    return this.profileServices.getAllSuperIntendents(req);
+  }
+
+
+  @Get('get-all-admins')
+  @Roles(Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Admin All Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved admin profile.' })
@@ -99,7 +114,7 @@ export class ProfileController {
   // Teacher Management
 
 
- 
+
 
   @Get('get-student/:student_id')
   @Roles(Role.TEACHER)
@@ -151,14 +166,7 @@ export class ProfileController {
     return this.profileServices.getJoinTeacherSubjectLevel(getJoinTeacherSubjectLevelDto, req);
   }
 
-  @Put('fill-teacher-profile')
-  @Roles(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Fill Teacher Profile' })
-  @ApiResponse({ status: 200, description: 'Teacher profile filled successfully.' })
-  async fillTeacherProfile(@Body() updateTeacherProfileDto: UpdateTeacherProfileDto, @Req() req: any) {
-    return this.profileServices.updateTeacherProfile(updateTeacherProfileDto, req);
-  }
+
 
   @Post('get-teacher-profile')
   @Roles(Role.ADMIN, Role.TEACHER)
@@ -195,14 +203,6 @@ export class ProfileController {
     return this.profileServices.getStudentsByLevel(req);
   }
 
-  @Put('fill-student-profile')
-  @Roles(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Fill Student Profile' })
-  @ApiResponse({ status: 200, description: 'Student profile filled successfully.' })
-  async fillStudentProfile(@Body() updateProflieDto: UpdateStudentProfileDto, @Req() req: any) {
-    return this.profileServices.updateStudentProfile(updateProflieDto, req);
-  }
 
   @Post('get-student-profile')
   @Roles(Role.ADMIN, Role.USER, Role.TEACHER)
@@ -212,4 +212,53 @@ export class ProfileController {
   async getStudentProfile(@Body() getProfileDto: GetStudentProfileDto, @Req() req: any) {
     return this.profileServices.getStudentProfile(getProfileDto, req);
   }
+
+
+  @Put('fill-profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Fill user profile based on role' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  async fillProfile(@Body() updateProfileDto: any, @Req() req: any) {
+    try {
+      const userRole = req.user.role; // Role from JWT
+      let result: any;
+
+      // Transaction for atomic updates
+      await this.sequelize.transaction(async (transaction) => {
+        if (userRole === Role.ADMIN) {
+          if (updateProfileDto.level_id && updateProfileDto.user_roll_no && updateProfileDto.parent_id) {
+            result = await this.profileServices.updateStudentProfile(updateProfileDto, req, transaction);
+          } else if (updateProfileDto.level_id && updateProfileDto.title) {
+            result = await this.profileServices.updateTeacherProfile(updateProfileDto, req, transaction);
+          } else {
+            throw new HttpException('Invalid payload for ADMIN', HttpStatus.BAD_REQUEST);
+          }
+        } else if (userRole === Role.SUPER_ADMIN) {
+          if (updateProfileDto.district_id) {
+            result = await this.profileServices.updateSuperIntendentProfile(updateProfileDto, req, transaction);
+          } else {
+            throw new HttpException('Invalid payload for SUPER_ADMIN', HttpStatus.BAD_REQUEST);
+          }
+        } else if (userRole === Role.SUPER_INTENDENT) {
+          if (updateProfileDto.school_id) {
+            result = await this.profileServices.updateAdminProfile(updateProfileDto, req, transaction);
+          } else {
+            throw new HttpException('Invalid payload for SUPER_INTENDENT', HttpStatus.BAD_REQUEST);
+          }
+        } else {
+          throw new HttpException('Role not allowed to fill profile', HttpStatus.FORBIDDEN);
+        }
+      });
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: "Profile updated successfully",
+        data: result,
+      };
+    } catch (error) {
+      console.error('Error in fillProfile:', error);
+      throw new HttpException(error.message || "Error updating profile", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
 }

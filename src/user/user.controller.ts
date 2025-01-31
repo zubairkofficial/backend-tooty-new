@@ -11,11 +11,11 @@ import {
   BadRequestException,
   Put,
   Query,
-  Res
+  Res,
+  Param
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import {
-  CreateAdminBySuperAdminDto,
   CreateUserByAdminDto,
   CreateUserDto,
   DeleteUserDto,
@@ -23,12 +23,12 @@ import {
   RefreshAccessToken,
   UserLoginDto,
   UserLogoutDto,
-} from './dto/create-user.dto';
+} from './dto/user.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
-import { UpdateProfileDto, UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto, UpdateUserDto } from './dto/user.dto';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
@@ -73,8 +73,8 @@ export class UserController {
   }
 
 
-  @Post('get-user')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT, Role.TEACHER, Role.USER)
+  @Get('get-user/:user_id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUPER_INTENDENT, Role.PARENT, Role.TEACHER, Role.USER)
   @ApiBearerAuth('access-token') // JWT Bearer authentication
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -82,8 +82,8 @@ export class UserController {
   @ApiOperation({ summary: 'Get user details by ID' })
   @ApiResponse({ status: 200, description: 'User details retrieved' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUser(@Body() getUserDto: GetUserDto, @Req() req: any) {
-    return this.userService.getUser(getUserDto, req);
+  async getUser(@Param('user_id') user_id: string, @Req() req: any) {
+    return this.userService.getUser(Number(user_id), req);
   }
 
 
@@ -123,28 +123,47 @@ export class UserController {
     return this.userService.getAllUsersByRole(Role.USER, req, page, limit);
   }
 
-
-  // it belongs to super admin to create admin
-  @Post('create-admin')
-  @Roles(Role.SUPER_ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')// JWT Bearer authentication
-  @ApiOperation({ summary: 'Create a admin by super_admin' })
-  @ApiResponse({ status: 201, description: 'Admin created successfully' })
-  async createAdmin(@Body() createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
-    return this.userService.createAdmin(createAdminBySuperAdminDto);
-  }
-
-  ///this belongs to the admin of school to create user, teacher etc..
   @Post('create-user')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN, Role.SUPER_INTENDENT, Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')// JWT Bearer authentication
-  @ApiOperation({ summary: 'Create a user by admin' })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a user based on role' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
-  async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto, @Req() req: any) {
-    return this.userService.createUser(createUserByAdminDto, req);
+  async createUser(@Body() createUserDto: CreateUserByAdminDto, @Req() req: any) {
+    return this.userService.createUser(createUserDto, req);
   }
+
+  // @Post('create-super-intendent') //create super intendent by super admin
+  // @Roles(Role.SUPER_ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @ApiBearerAuth('access-token')// JWT Bearer authentication
+  // @ApiOperation({ summary: 'Create a admin by super admin' })
+  // @ApiResponse({ status: 201, description: 'Admin created successfully' })
+  // async createSuperIntendent(@Body() createSuperIntendentDto: CreateSuperIntendentDto) {
+  //   return this.userService.createSuperIntendent(createSuperIntendentDto);
+  // }
+
+  // // it belongs to super intentdent to create admin
+  // @Post('create-admin') //create principle by super intendent
+  // @Roles(Role.SUPER_INTENDENT)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @ApiBearerAuth('access-token')// JWT Bearer authentication
+  // @ApiOperation({ summary: 'Create a admin by super_intendent' })
+  // @ApiResponse({ status: 201, description: 'Admin created successfully' })
+  // async createAdmin(@Body() createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
+  //   return this.userService.createAdmin(createAdminBySuperAdminDto);
+  // }
+
+  // ///this belongs to the admin of school to create user, teacher etc..
+  // @Post('create-user') //create user,teacher,parent by principle
+  // @Roles(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @ApiBearerAuth('access-token')// JWT Bearer authentication
+  // @ApiOperation({ summary: 'Create a user by admin' })
+  // @ApiResponse({ status: 201, description: 'User created successfully' })
+  // async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto, @Req() req: any) {
+  //   return this.userService.createUser(createUserByAdminDto, req);
+  // }
   @Delete('delete-parent')
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)

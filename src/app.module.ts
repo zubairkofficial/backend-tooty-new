@@ -42,6 +42,10 @@ import { School } from './school/entities/school.entity';
 import { SuperAdminProfile } from './profile/entities/super-admin.entity';
 import { ParentProfile } from './profile/entities/parent-profile.entity';
 import { StatsModule } from './stats/stats.module';
+import { JoinSchoolAdmin } from './school/entities/join-school-admin.entity';
+import { DistrictModule } from './district/district.module';
+import { District } from './district/entity/district.entity';
+import { SuperIntendentProfile } from './profile/entities/super-intendent-profile.entity';
 
 @Module({
   imports: [
@@ -60,7 +64,7 @@ import { StatsModule } from './stats/stats.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadModels: true,
-      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile ,AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School],
+      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile ,AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School, JoinSchoolAdmin, District, SuperIntendentProfile],
       synchronize: process.env.DB_SYNCHRONIZE == 'true' ? true : false,
       logging: true,
 
@@ -94,6 +98,7 @@ import { StatsModule } from './stats/stats.module';
     AnswerModule,
     SchoolModule,
     StatsModule,
+    DistrictModule,
   ],
   controllers: [AppController],
   providers: [AppService],

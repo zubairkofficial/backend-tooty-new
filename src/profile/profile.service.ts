@@ -1,8 +1,8 @@
-import { UpdateStudentProfileDto } from './dto/update-profile.dto';
+import { UpdateStudentProfileDto, UpdateSuperIntendentProfileDto, UpdateTeacherProfileDto } from './dto/update-profile.dto';
 import { StudentProfile } from './entities/student-profile.entity';
 import { GetStudentProfileDto } from './dto/get-profile.dto';
 import { Op } from 'sequelize';
-import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto, UpdateTeacherProfileDto } from './dto/teacher-profile.dto';
+import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto } from './dto/teacher-profile.dto';
 import { TeacherProfile } from './entities/teacher-profile.entity';
 import { JoinTeacherSubjectLevel } from './entities/join-teacher-subject-level.entity';
 import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
@@ -21,6 +21,8 @@ import { Answer } from 'src/answer/entities/answer.entity';
 import { Question } from 'src/question/entities/question.entity';
 import { Option } from 'src/option/entities/option.entity';
 import * as nodemailer from 'nodemailer'
+import { Transaction } from 'sequelize';
+import { SuperIntendentProfile } from './entities/super-intendent-profile.entity';
 
 export class ProfileService {
 
@@ -274,15 +276,46 @@ export class ProfileService {
         }
     }
 
+    async getAllSuperIntendents(req: any) {
+        try {
+            const admins = await User.findAll({
+                attributes: ["id", "name", "email", "contact", "role", "isVerified"],
+                // include: [
+                //     {
+                //         model: AdminProfile,
+                //     },
+                // ],
+                where: {
+                    role: {
+                        [Op.eq]: Role.SUPER_INTENDENT,
+                    },
+                },
+            });
+
+
+
+            return {
+                statusCode: 200,
+                data: admins,
+            };
+        } catch (error) {
+            console.error('Error in getAllAdmins:', error);
+            throw new HttpException(
+                error.message || 'Failed to fetch admin profiles',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
 
     async getAllAdmins(req: any) {
         try {
             const admins = await User.findAll({
-                include: [
-                    {
-                        model: AdminProfile,
-                    },
-                ],
+                attributes: ["id", "name", "email", "contact", "role"],
+                // include: [
+                //     {
+                //         model: AdminProfile,
+                //     },
+                // ],
                 where: {
                     role: {
                         [Op.eq]: Role.ADMIN,
@@ -290,9 +323,7 @@ export class ProfileService {
                 },
             });
 
-            if (!admins || admins.length === 0) {
-                throw new HttpException('No admins found', HttpStatus.NOT_FOUND);
-            }
+
 
             return {
                 statusCode: 200,
@@ -310,21 +341,22 @@ export class ProfileService {
     async getAdminProfile(admin_id: string, req: any) {
         try {
             const admin_profile = await User.findOne({
-                include: [
-                    {
-                        model: AdminProfile,
-                        where: {
-                            id: {
-                                [Op.eq]: Number(admin_id),
-                            },
-                        },
-                        include: [
-                            {
-                                model: School,
-                            },
-                        ],
-                    },
-                ],
+                attributes: ["name", "email", "contact"],
+                // include: [
+                //     {
+                //         model: AdminProfile,
+                //         where: {
+                //             id: {
+                //                 [Op.eq]: Number(admin_id),
+                //             },
+                //         },
+                //         include: [
+                //             {
+                //                 model: School,
+                //             },
+                //         ],
+                //     },
+                // ],
             });
 
             if (!admin_profile) {
@@ -537,38 +569,6 @@ export class ProfileService {
         } catch (error) {
             console.error('Error in getTeacherProfile:', error);
             throw new HttpException(error.message || "Error fetching teacher profile", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    async updateTeacherProfile(updateTeacherProfile: UpdateTeacherProfileDto, req: any) {
-        try {
-            const [updatedRows] = await TeacherProfile.update(
-                {
-                    title: updateTeacherProfile.title,
-                    level_id: updateTeacherProfile.level_id,
-                },
-                {
-                    where: {
-                        user_id: {
-                            [Op.eq]: updateTeacherProfile.user_id,
-                        },
-                    },
-                }
-            );
-
-            if (updatedRows === 0) {
-                throw new HttpException('No matching profile found to update', HttpStatus.NOT_FOUND);
-            }
-
-            console.log('Profile updated:', updatedRows);
-
-            return {
-                statusCode: 200,
-                message: "Profile updated successfully",
-            };
-        } catch (error) {
-            console.error('Error in updateTeacherProfile:', error);
-            throw new HttpException(error.message || "Error updating profile", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -814,50 +814,84 @@ export class ProfileService {
         }
     }
 
-    async updateStudentProfile(updateProfileDto: UpdateStudentProfileDto, req: any) {
-        try {
-            // Validate input data
-            if (!updateProfileDto.user_id) {
-                throw new HttpException(
-                    {
-                        statusCode: HttpStatus.BAD_REQUEST,
-                        message: "User ID is required for updating the profile.",
-                    },
-                    HttpStatus.BAD_REQUEST,
-                );
+    async updateStudentProfile(updateProfileDto: UpdateStudentProfileDto, req: any, transaction: Transaction) {
+        const [updatedCount] = await StudentProfile.update(
+            {
+                level_id: updateProfileDto.level_id,
+                user_roll_no: updateProfileDto.user_roll_no,
+                parent_id: updateProfileDto.parent_id,
+            },
+            {
+                where: { user_id: updateProfileDto.user_id },
+                transaction
             }
+        );
 
-            const [updatedCount] = await StudentProfile.update(
-                {
-                    level_id: updateProfileDto.level_id,
-                    user_roll_no: updateProfileDto.user_roll_no,
-                    parent_id: updateProfileDto.parent_id,
-                },
-                {
-                    where: {
-                        user_id: updateProfileDto.user_id,
-                    },
-                }
-            );
-
-            if (updatedCount === 0) {
-                return {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: "Student profile not found or no changes were made.",
-                };
-            }
-
-            return {
-                statusCode: HttpStatus.OK,
-                message: "Student profile updated successfully.",
-            };
-        } catch (error) {
-            console.error('Error in updateStudentProfile:', error);
-            throw new HttpException(
-                error.message || "Error updating student profile.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-            );
+        if (updatedCount === 0) {
+            throw new HttpException("Student profile not found or no changes made", HttpStatus.NOT_FOUND);
         }
+
+        return { message: "Student profile updated successfully." };
+    }
+
+    async updateTeacherProfile(updateProfileDto: UpdateTeacherProfileDto, req: any, transaction: Transaction) {
+        const [updatedRows] = await TeacherProfile.update(
+            {
+                title: updateProfileDto.title,
+                level_id: updateProfileDto.level_id,
+            },
+            {
+                where: { user_id: updateProfileDto.user_id },
+                transaction
+            }
+        );
+
+        if (updatedRows === 0) {
+            throw new HttpException('No matching teacher profile found to update', HttpStatus.NOT_FOUND);
+        }
+
+        return { message: "Teacher profile updated successfully" };
+    }
+
+    async updateSuperIntendentProfile(updateProfileDto: UpdateSuperIntendentProfileDto, req: any, transaction: Transaction) {
+        const [updatedRows] = await SuperIntendentProfile.update(
+            {
+                district_id: updateProfileDto.district_id,
+            },
+            {
+                where: {
+                    id: {
+                        [Op.eq]: updateProfileDto.user_id
+                    }
+                },
+                transaction
+            }
+        );
+
+        if (updatedRows === 0) {
+            throw new HttpException('No matching profile found to update', HttpStatus.NOT_FOUND);
+        }
+
+        return { message: "Super Intendent profile updated successfully" };
+    }
+
+
+    async updateAdminProfile(updateProfileDto: UpdateAdminProfileDto, req: any, transaction: Transaction) {
+        const [updatedRows] = await AdminProfile.update(
+            {
+                school_id: updateProfileDto.school_id,
+            },
+            {
+                where: { user_id: req.user.id },
+                transaction
+            }
+        );
+
+        if (updatedRows === 0) {
+            throw new HttpException('No matching profile found to update', HttpStatus.NOT_FOUND);
+        }
+
+        return { message: "Admin profile updated successfully" };
     }
 
 

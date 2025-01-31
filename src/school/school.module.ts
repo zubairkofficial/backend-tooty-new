@@ -15,10 +15,11 @@ import { Chat } from 'src/chat/entities/chat.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
+import { JoinSchoolAdmin } from './entities/join-school-admin.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([School, AdminProfile, Bot, File, Subject, Level, User, Chat, TeacherProfile, StudentProfile, ParentProfile]), // Register School model
+    SequelizeModule.forFeature([School, AdminProfile, Bot, File, Subject, Level, User, Chat, TeacherProfile, StudentProfile, ParentProfile, JoinSchoolAdmin]), // Register School model
     // forwardRef(() => UserModule), // Use forwardRef to resolve circular dependency
   ],
   controllers: [SchoolsController],

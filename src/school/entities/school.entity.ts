@@ -1,12 +1,10 @@
-import { BelongsTo, Column, DataType, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
+import { BelongsTo, BelongsToMany, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
 import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
-import { File } from 'src/context_data/entities/file.entity';
-import { Subject } from 'src/subject/entity/subject.entity';
-import { Bot } from 'src/bot/entities/bot.entity';
-import { Level } from 'src/level/entity/level.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
+import { JoinSchoolAdmin } from './join-school-admin.entity';
+import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
 
 @Table({
   tableName: 'schools',
@@ -33,27 +31,26 @@ export class School extends Model {
   })
   description: string;
 
+  @ForeignKey(() => SuperIntendentProfile)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+  })
+  created_by_id: number;
+
+
   @HasMany(() => StudentProfile, { onDelete: 'CASCADE' })
   students!: StudentProfile[]
 
-  @HasMany(() => ParentProfile,{ onDelete: 'CASCADE' })
+  @HasMany(() => ParentProfile, { onDelete: 'CASCADE' })
   parents!: ParentProfile[]
 
   @HasMany(() => TeacherProfile, { onDelete: 'CASCADE' })
   teachers!: TeacherProfile[]
 
-  @HasMany(() => AdminProfile)
+  @BelongsToMany(() => AdminProfile, () => JoinSchoolAdmin)
   admins!: AdminProfile[]
 
-  @HasMany(() => File, { onDelete: 'CASCADE' })
-  files!: File[]
-
-  @HasMany(() => Subject, { onDelete: 'CASCADE' })
-  subjects!: Subject[]
-
-  @HasMany(() => Bot, { onDelete: 'CASCADE' })
-  bots!: Bot[]
-
-  @HasMany(() => Level, { onDelete: 'CASCADE' })
-  level!: Level[]
+  @BelongsTo(() => SuperIntendentProfile)
+  creator!: SuperIntendentProfile
 }

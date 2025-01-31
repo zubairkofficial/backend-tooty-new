@@ -1,6 +1,5 @@
-import { UnauthorizedException, HttpStatus, Logger, HttpException } from '@nestjs/common';
+import { UnauthorizedException, HttpStatus, Logger, HttpException, Injectable } from '@nestjs/common';
 import {
-  CreateAdminBySuperAdminDto,
   CreateUserByAdminDto,
   CreateUserDto,
   DeleteUserDto,
@@ -8,7 +7,7 @@ import {
   RefreshAccessToken,
   UserLoginDto,
   UserLogoutDto,
-} from './dto/create-user.dto';
+} from './dto/user.dto';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
 
@@ -26,7 +25,7 @@ import { Role } from 'src/utils/roles.enum';
 
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { Op } from 'sequelize';
-import { UpdateProfileDto, UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto, UpdateUserDto } from './dto/user.dto';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { Multer } from 'multer';
 import { unlink } from 'fs/promises';
@@ -37,9 +36,17 @@ import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
+import { InjectConnection } from '@nestjs/sequelize';
+import { Subject } from 'src/subject/entity/subject.entity';
+import { District } from 'src/district/entity/district.entity';
 
+@Injectable()
 export class UserService {
-  constructor(private readonly logger = new Logger('UserService')
+  private readonly logger = new Logger('UserService')
+  constructor(
+
+    private readonly sequelize: Sequelize
 
   ) { }
 
@@ -448,186 +455,374 @@ export class UserService {
   }
 
 
-  async createAdmin(createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
-    const existingUser = await User.findOne({
-      where: { email: createAdminBySuperAdminDto.email },
-    });
-    if (existingUser) {
-      return {
-        message: 'Admin Already Exist',
-        statusCode: 1000,
-        user: {
-          isVerified: existingUser.isVerified,
-        },
-      };
-    }
-    const hashedPassword = await bcrypt.hash(createAdminBySuperAdminDto.password, 10);
-
-    const res = await User.create({
-      name: createAdminBySuperAdminDto.name,
-      email: createAdminBySuperAdminDto.email,
-      password: hashedPassword,
-      contact: createAdminBySuperAdminDto.contact,
-      role: createAdminBySuperAdminDto.role,
-      isVerified: true
-    }).then(async (u) => {
-
-      await AdminProfile.create({
-        id: u.id,
-        user_id: u.id,
-        school_id: createAdminBySuperAdminDto.school_id
-      })
-
-      return u
-    });
-    return {
-      message: 'Admin successfully registered.',
-      statusCode: HttpStatus.OK,
-      data: {
-        id: res.id,
-        name: res.name,
-        email: res.email,
-      },
-    };
-  }
-
-
-  async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
+  async createUser(createUserDto: CreateUserByAdminDto, req: any) {
+    const transaction = await this.sequelize.transaction(); // Start Transaction
 
     try {
-      let user: User;
-      try {
-        // Check if the user already exists
-        const existingUser = await User.findOne({
-          where: { email: createUserByAdminDto.email },
-          paranoid: false
-        });
+      // Check if email already exists
+      const existingUser = await User.findOne({ where: { email: createUserDto.email }, paranoid: false, transaction });
+      if (existingUser) {
+        throw new HttpException('User with email already exists', HttpStatus.BAD_REQUEST);
+      }
 
-        if (existingUser) {
-          throw new Error("User with email already exist")
-        }
+      // Hash password
+      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-        // Validate role-specific fields before creating anything
-        if (createUserByAdminDto.role === Role.USER) {
-          if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
-            throw new Error('Failed to create Student: level and parent are required');
-          }
-        }
-
-        if (createUserByAdminDto.role === Role.TEACHER) {
-          if (!createUserByAdminDto.level_id) {
-            throw new Error('Failed to create Teacher: level/grade is required');
-          }
-        }
-
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
-
-        // Create the user
-        user = await User.create({
-          name: createUserByAdminDto.name,
-          email: createUserByAdminDto.email,
+      // Create user inside transaction
+      const user = await User.create(
+        {
+          name: createUserDto.name,
+          email: createUserDto.email,
           password: hashedPassword,
-          contact: createUserByAdminDto.contact,
-          role: createUserByAdminDto.role,
+          contact: createUserDto.contact,
+          role: createUserDto.role,
           isVerified: true,
-        });
-
-        // Create role-specific profiles
-        if (createUserByAdminDto.role === Role.USER) {
-          await StudentProfile.create({
-            level_id: createUserByAdminDto.level_id,
-            user_id: user.id,
-            user_roll_no: createUserByAdminDto.user_roll_no,
-            id: user.id,
-            school_id: req.user.school_id,
-            parent_id: createUserByAdminDto.parent_id,
-          });
-        } else if (createUserByAdminDto.role === Role.TEACHER) {
-          const teacher = await TeacherProfile.create({
-            user_id: user.id,
-            id: user.id,
-            title: '',
-            level_id: createUserByAdminDto.level_id,
-            school_id: req.user.school_id,
-          });
-
-          // Create join records for teacher subjects
-          for (const subjectId of createUserByAdminDto.subjects) {
-            await JoinTeacherSubjectLevel.create({
-              level_id: createUserByAdminDto.level_id,
-              subject_id: subjectId,
-              teacher_id: teacher.id,
-            });
-          }
-        } else if (createUserByAdminDto.role === Role.PARENT) {
-          await ParentProfile.create({
-            user_id: user.id,
-            id: user.id,
-            school_id: req.user.school_id,
-          });
-        }
-
-
-      } catch (error) {
-
-        throw new Error("Error Creating User" + error.message)
-      }
-
-      const transporter = nodemailer.createTransport({
-        host: `${process.env.EMAIL_HOST}`,
-        port: Number(`${process.env.EMAIL_PORT}`),
-        secure: false,
-        auth: {
-          user: `${process.env.EMAIL_USERNAME}`,
-          pass: `${process.env.EMAIL_PASSWORD}`,
         },
-      });
+        { transaction }
+      );
 
-      try {
-        // Send email
-        await transporter.sendMail({
-          from: `${process.env.EMAIL_FROM_ADDRESS}`,
-          to: user.email, // Use the provided email
-          subject: `Tooty for ${user.role}`,
-          text: `Congratulations!
-              Your Tooty account has been created. Credentials are given below
+      // Role-Specific Profile Handling
+      switch (createUserDto.role) {
+        case Role.SUPER_INTENDENT:
+          if (req.user.role !== Role.SUPER_ADMIN) {
+            throw new Error("UnAuthorized")
+          }
+          if (!createUserDto.district_id) throw new Error('District ID is required for Super Intendent');
+          await SuperIntendentProfile.create({ id: user.id, user_id: user.id, district_id: createUserDto.district_id }, { transaction });
+          break;
 
-              email: ${user.email}
-              password:  ${createUserByAdminDto.password}
-        `,
-          html: ` <p>Congratulations! Tooty Account has been created Successfully
-                  <strong>email: ${user.email}</strong>
-                  <strong>password:  ${createUserByAdminDto.password}</strong>
-                </p>`,
-        });
+        case Role.ADMIN:
+          if (req.user.role !== Role.SUPER_INTENDENT) {
+            throw new Error("UnAuthorized")
+          }
+          if (!createUserDto.school_id) throw new Error('School ID is required for Admin');
+          await AdminProfile.create({ id: user.id, user_id: user.id, school_id: createUserDto.school_id }, { transaction });
+          break;
 
-      } catch (error) {
-        throw new Error("account creation email send failed")
+        case Role.USER:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("UnAuthorized")
+          }
+          if (!createUserDto.level_id || !createUserDto.parent_id) throw new Error('Level and Parent ID are required for Student');
+          await StudentProfile.create(
+            {
+              id: user.id,
+              user_id: user.id,
+              level_id: createUserDto.level_id,
+              parent_id: createUserDto.parent_id,
+              user_roll_no: createUserDto.user_roll_no,
+              school_id: req.user.school_id,
+            },
+            { transaction }
+          );
+          break;
+
+        case Role.TEACHER:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("UnAuthorized")
+          }
+          if (!createUserDto.level_id) throw new Error('Level is required for Teacher');
+          const teacher = await TeacherProfile.create(
+            { id: user.id, user_id: user.id, level_id: createUserDto.level_id, school_id: req.user.school_id },
+            { transaction }
+          );
+
+          for (const subjectId of createUserDto.subjects) {
+            await JoinTeacherSubjectLevel.create(
+              { level_id: createUserDto.level_id, subject_id: subjectId, teacher_id: teacher.id },
+              { transaction }
+            );
+          }
+          break;
+
+        case Role.PARENT:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("UnAuthorized")
+          }
+          await ParentProfile.create({ id: user.id, user_id: user.id, school_id: req.user.school_id }, { transaction });
+          break;
+
+        default:
+          throw new HttpException('Invalid user Role', HttpStatus.BAD_REQUEST);
       }
 
-      // Return success response
+      // Commit Transaction if everything is successful
+      await transaction.commit();
+
+      // Send email after successful commit
+      await this.sendAccountCreationEmail(user, createUserDto.password);
+
       return {
         message: 'User successfully registered.',
         statusCode: HttpStatus.OK,
-        data: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
+        data: { id: user.id, name: user.name, email: user.email },
       };
-    } catch (error) {
-      // Handle errors and log them if necessary
-      console.error('Error in createUser:', error);
 
-      // Return error response
-      return {
-        message: error.message || 'Internal Server Error',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        error: error.message || 'Internal Server Error',
-      };
+    } catch (error) {
+      // Rollback Transaction in case of an error
+      await transaction.rollback();
+      throw new HttpException(error.message || 'Failed to create user', error.statusCode || HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  private async sendAccountCreationEmail(user: any, password: string) {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT),
+      secure: false,
+      auth: { user: process.env.EMAIL_USERNAME, pass: process.env.EMAIL_PASSWORD },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM_ADDRESS,
+      to: user.email,
+      subject: `Welcome to Tooty, ${user.role}`,
+      text: `Your account has been created. Email: ${user.email}, Password: ${password}`,
+      html: `<p>Welcome to Tooty! Your credentials: <strong>Email:</strong> ${user.email}, <strong>Password:</strong> ${password}</p>`,
+    });
+  }
+
+
+  // async createSuperIntendent(createSuperIntendentDto: CreateSuperIntendentDto) {
+  //   try {
+  //     const existingUser = await User.findOne({
+  //       where: { email: createSuperIntendentDto.email },
+  //     });
+  //     if (existingUser) {
+  //       return {
+  //         message: 'Super Intendent Already Exist',
+  //         statusCode: 1000,
+  //         user: {
+  //           isVerified: existingUser.isVerified,
+  //         },
+  //       };
+  //     }
+  //     const hashedPassword = await bcrypt.hash(createSuperIntendentDto.password, 10);
+
+  //     const res = await User.create({
+  //       name: createSuperIntendentDto.name,
+  //       email: createSuperIntendentDto.email,
+  //       password: hashedPassword,
+  //       contact: createSuperIntendentDto.contact,
+  //       role: Role.SUPER_INTENDENT,
+  //       isVerified: true
+  //     }).then(async (u) => {
+
+  //       await SuperIntendentProfile.create({
+  //         id: u.id,
+  //         user_id: u.id,
+  //         district_id: createSuperIntendentDto.district_id
+  //       })
+
+  //       return u
+  //     });
+  //     return {
+  //       message: 'Admin successfully registered.',
+  //       statusCode: HttpStatus.OK,
+  //       data: {
+  //         id: res.id,
+  //         name: res.name,
+  //         email: res.email,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error(error);
+  //     throw new HttpException(
+  //       error.message || 'Failed to create super intendent',
+  //       error.statusCode || 500
+  //     );
+  //   }
+
+  // }
+
+  // async createAdmin(createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
+
+  //   try {
+  //     const existingUser = await User.findOne({
+  //       where: { email: createAdminBySuperAdminDto.email },
+  //     });
+  //     if (existingUser) {
+  //       return {
+  //         message: 'Admin Already Exist',
+  //         statusCode: 1000,
+  //         user: {
+  //           isVerified: existingUser.isVerified,
+  //         },
+  //       };
+  //     }
+  //     const hashedPassword = await bcrypt.hash(createAdminBySuperAdminDto.password, 10);
+
+  //     const res = await User.create({
+  //       name: createAdminBySuperAdminDto.name,
+  //       email: createAdminBySuperAdminDto.email,
+  //       password: hashedPassword,
+  //       contact: createAdminBySuperAdminDto.contact,
+  //       role: createAdminBySuperAdminDto.role,
+  //       isVerified: true
+  //     }).then(async (u) => {
+
+  //       await AdminProfile.create({
+  //         id: u.id,
+  //         user_id: u.id,
+  //         school_id: createAdminBySuperAdminDto.school_id
+  //       })
+
+  //       return u
+  //     });
+  //     return {
+  //       message: 'Admin successfully registered.',
+  //       statusCode: HttpStatus.OK,
+  //       data: {
+  //         id: res.id,
+  //         name: res.name,
+  //         email: res.email,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error(error);
+  //     throw new HttpException(
+  //       error.message || 'Failed to create admin',
+  //       error.statusCode || 500
+  //     );
+  //   }
+  // }
+
+  // async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
+
+  //   try {
+  //     let user: User;
+  //     try {
+  //       // Check if the user already exists
+  //       const existingUser = await User.findOne({
+  //         where: { email: createUserByAdminDto.email },
+  //         paranoid: false
+  //       });
+
+  //       if (existingUser) {
+  //         throw new Error("User with email already exist")
+  //       }
+
+  //       // Validate role-specific fields before creating anything
+  //       if (createUserByAdminDto.role === Role.USER) {
+  //         if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
+  //           throw new Error('Failed to create Student: level and parent are required');
+  //         }
+  //       }
+
+  //       if (createUserByAdminDto.role === Role.TEACHER) {
+  //         if (!createUserByAdminDto.level_id) {
+  //           throw new Error('Failed to create Teacher: level/grade is required');
+  //         }
+  //       }
+
+  //       // Hash the password
+  //       const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
+
+  //       // Create the user
+  //       user = await User.create({
+  //         name: createUserByAdminDto.name,
+  //         email: createUserByAdminDto.email,
+  //         password: hashedPassword,
+  //         contact: createUserByAdminDto.contact,
+  //         role: createUserByAdminDto.role,
+  //         isVerified: true,
+  //       });
+
+  //       // Create role-specific profiles
+  //       if (createUserByAdminDto.role === Role.USER) {
+  //         await StudentProfile.create({
+  //           level_id: createUserByAdminDto.level_id,
+  //           user_id: user.id,
+  //           user_roll_no: createUserByAdminDto.user_roll_no,
+  //           id: user.id,
+  //           school_id: req.user.school_id,
+  //           parent_id: createUserByAdminDto.parent_id,
+  //         });
+  //       } else if (createUserByAdminDto.role === Role.TEACHER) {
+  //         const teacher = await TeacherProfile.create({
+  //           user_id: user.id,
+  //           id: user.id,
+  //           title: '',
+  //           level_id: createUserByAdminDto.level_id,
+  //           school_id: req.user.school_id,
+  //         });
+
+  //         // Create join records for teacher subjects
+  //         for (const subjectId of createUserByAdminDto.subjects) {
+  //           await JoinTeacherSubjectLevel.create({
+  //             level_id: createUserByAdminDto.level_id,
+  //             subject_id: subjectId,
+  //             teacher_id: teacher.id,
+  //           });
+  //         }
+  //       } else if (createUserByAdminDto.role === Role.PARENT) {
+  //         await ParentProfile.create({
+  //           user_id: user.id,
+  //           id: user.id,
+  //           school_id: req.user.school_id,
+  //         });
+  //       }
+
+
+  //     } catch (error) {
+
+  //       throw new Error("Error Creating User" + error.message)
+  //     }
+
+  //     const transporter = nodemailer.createTransport({
+  //       host: `${process.env.EMAIL_HOST}`,
+  //       port: Number(`${process.env.EMAIL_PORT}`),
+  //       secure: false,
+  //       auth: {
+  //         user: `${process.env.EMAIL_USERNAME}`,
+  //         pass: `${process.env.EMAIL_PASSWORD}`,
+  //       },
+  //     });
+
+  //     try {
+  //       // Send email
+  //       await transporter.sendMail({
+  //         from: `${process.env.EMAIL_FROM_ADDRESS}`,
+  //         to: user.email, // Use the provided email
+  //         subject: `Tooty for ${user.role}`,
+  //         text: `Congratulations!
+  //             Your Tooty account has been created. Credentials are given below
+
+  //             email: ${user.email}
+  //             password:  ${createUserByAdminDto.password}
+  //       `,
+  //         html: ` <p>Congratulations! Tooty Account has been created Successfully
+  //                 <strong>email: ${user.email}</strong>
+  //                 <strong>password:  ${createUserByAdminDto.password}</strong>
+  //               </p>`,
+  //       });
+
+  //     } catch (error) {
+  //       throw new Error("account creation email send failed")
+  //     }
+
+  //     // Return success response
+  //     return {
+  //       message: 'User successfully registered.',
+  //       statusCode: HttpStatus.OK,
+  //       data: {
+  //         id: user.id,
+  //         name: user.name,
+  //         email: user.email,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     // Handle errors and log them if necessary
+  //     console.error('Error in createUser:', error);
+
+  //     // Return error response
+  //     return {
+  //       message: error.message || 'Internal Server Error',
+  //       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+  //       error: error.message || 'Internal Server Error',
+  //     };
+  //   }
+  // }
 
 
   async signup(createUserDto: CreateUserDto, res: Response) {
@@ -1073,15 +1268,41 @@ export class UserService {
     }
   }
 
-  async getUser(getStudentDto: GetUserDto, req: any) {
+  async getUser(user_id: number, req: any) {
     try {
-      const student = await User.findByPk(getStudentDto.user_id, {
+      const student = await User.findByPk(user_id, {
         attributes: {
           exclude: ["password"]
         },
         include: [{
+          required: false,
           model: StudentProfile
-        }]
+        },
+        {
+          required: false,
+          model: TeacherProfile,
+          include: [{
+            required: true,
+            model: Subject
+          }]
+        },
+        {
+          required: false,
+          model: AdminProfile
+        },
+        {
+          required: false,
+          model: SuperIntendentProfile,
+          include: [{
+            required: true,
+            model: District
+          }]
+        },
+        {
+          required: false,
+          model: ParentProfile
+        }
+        ]
       })
 
       return {
@@ -1090,7 +1311,7 @@ export class UserService {
       }
 
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(error.message || `Failed to get user with id ${user_id}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

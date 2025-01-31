@@ -52,7 +52,7 @@ export class ContextDataService {
         }
     }
 
-    async getAllFilesBySchool(req: any, page?: number, limit?: number) {
+    async getAllFiles(req: any, page?: number, limit?: number) {
 
         console.log('req user:', req.user, page, limit);
         try {
@@ -64,9 +64,7 @@ export class ContextDataService {
                 // Pagination logic
                 const offset = (page - 1) * limit;
                 const result = await File.findAndCountAll({
-                    where: {
-                        school_id: req.user.school_id, // Filter files by user ID
-                    },
+                   
                     include: [{
                         model: Subject,
                         attributes: ["title"],
@@ -84,9 +82,7 @@ export class ContextDataService {
             } else {
                 // Return all files if page and limit are not provided
                 files = await File.findAll({
-                    where: {
-                        school_id: req.user.school_id, // Filter files by user ID
-                    },
+                   
                     include: [{
                         model: Subject,
                         attributes: ["title"],
@@ -326,7 +322,7 @@ export class ContextDataService {
                     slug: createFileDto.slug + "-" + new Date(),
                     user_id: req.user.sub,
                     subject_id: Number(createFileDto.subject_id),
-                    school_id: req.user.school_id,
+                   
                 });
             } catch (error) {
                 console.error('Error creating file record:', error);
@@ -340,7 +336,7 @@ export class ContextDataService {
                 ...doc,
                 metadata: {
                     file_id: context_file?.id,
-                    school_id: req.user.school_id,
+                  
                 },
             }));
 

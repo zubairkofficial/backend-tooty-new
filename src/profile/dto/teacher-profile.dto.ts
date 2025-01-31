@@ -2,30 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 
-export class UpdateTeacherProfileDto {
 
-    @ApiProperty({
-        description: 'The title of the teacher',
-        example: 'Dr.',
-    })
-    @IsString()
-    @IsNotEmpty()
-    title: string;
-
-    @ApiProperty({
-        description: 'The level ID of the teacher',
-        example: 1,
-    })
-    @IsNumber()
-    level_id: number;
-
-    @ApiProperty({
-        description: 'The user ID of the teacher',
-        example: 123,
-    })
-    @IsNumber()
-    user_id: number;
-}
 
 export class GetJoinsTeacherSubjectLevelDto {
 

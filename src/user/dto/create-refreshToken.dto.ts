@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
-import { CreateUserDto } from './create-user.dto';
+import { CreateUserDto } from './user.dto';
 
 export class CreateRefreshTokenDto {
   readonly id: number;

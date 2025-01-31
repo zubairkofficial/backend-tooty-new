@@ -22,6 +22,10 @@ export class UpdateAdminProfileDto {
     @IsString()
     @IsNotEmpty()
     contact: string
+
+    @IsString()
+    @IsNotEmpty()
+    role: string
 }
 
 export class UpdateSuperAdminDto {

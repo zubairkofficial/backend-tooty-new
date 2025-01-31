@@ -70,10 +70,7 @@ export class SubjectService {
             [Op.eq]: getSubjectByLevelDto.level_id,
 
           },
-          school_id: {
-            [Op.eq]: req.user.school_id,
-
-          },
+         
         },
       });
 
@@ -123,11 +120,7 @@ export class SubjectService {
         // Pagination logic
         const offset = (page - 1) * limit;
         const result = await Subject.findAndCountAll({
-          where: {
-            school_id: {
-              [Op.eq]: req.user.school_id
-            }
-          },
+         
           include: [{
             model: Level,
             as: "level"
@@ -140,11 +133,7 @@ export class SubjectService {
       } else {
         // Return all subjects if page and limit are not provided
         subjects = await Subject.findAll({
-          where: {
-            school_id: {
-              [Op.eq]: req.user.school_id
-            }
-          },
+          
           include: [{
             model: Level,
             as: "level"
@@ -175,7 +164,7 @@ export class SubjectService {
       const subject = await Subject.findOne({
         where: {
           id: updateSubjectDto.id,
-          school_id: req.user.school_id, // Ensure the subject belongs to the same school
+        
         },
       });
 
@@ -195,7 +184,7 @@ export class SubjectService {
           where: {
             title: updateSubjectDto.title,
             level_id: updateSubjectDto.level_id,
-            school_id: req.user.school_id,
+         
             id: { [Op.ne]: updateSubjectDto.id }, // Exclude the current subject
           },
         });
@@ -221,7 +210,7 @@ export class SubjectService {
         {
           where: {
             id: updateSubjectDto.id,
-            school_id: req.user.school_id, // Ensure the update is scoped to the same school
+          
           },
         },
       );
@@ -243,7 +232,7 @@ export class SubjectService {
         where: {
           title: createSubjectDto.title,
           level_id: createSubjectDto.level_id,
-          school_id: req.user.school_id,
+         
         },
       });
 
@@ -262,7 +251,7 @@ export class SubjectService {
         display_title: createSubjectDto.display_title,
         description: createSubjectDto.description,
         level_id: createSubjectDto.level_id,
-        school_id: req.user.school_id,
+       
       });
 
       return {

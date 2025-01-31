@@ -14,7 +14,7 @@ export class LevelController {
     constructor(private readonly levelServices: LevelService) { }
 
     @Post('get-level')
-    @Roles(Role.ADMIN, Role.TEACHER)
+    @Roles(Role.TEACHER, Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Get a specific level by its ID' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved the level' })
@@ -24,7 +24,7 @@ export class LevelController {
     }
 
     @Get('get-all-levels')
-    @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+    @Roles(Role.ADMIN, Role.SUPER_INTENDENT, Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Get all levels with pagination' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved all levels' })
@@ -38,7 +38,7 @@ export class LevelController {
     }
 
     @Put('update-level')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Update a level' })
     @ApiResponse({ status: 200, description: 'Successfully updated the level' })
@@ -48,7 +48,7 @@ export class LevelController {
     }
 
     @Post('create-level')
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Create a new level' })
     @ApiResponse({ status: 201, description: 'Successfully created the level' })

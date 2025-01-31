@@ -16,6 +16,7 @@ import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { SuperAdminProfile } from 'src/profile/entities/super-admin.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
+import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
 
 @Table({
   tableName: 'users',
@@ -87,6 +88,9 @@ export class User extends Model {
 
   @HasOne(() => SuperAdminProfile)
   super_admin_profile: SuperAdminProfile
+
+  @HasOne(() => SuperIntendentProfile, { onDelete: 'CASCADE' })
+  super_intendent_profile: SuperIntendentProfile
 
   @HasMany(() => Chat, { onDelete: 'CASCADE' })
   chats!: Chat[]

@@ -27,7 +27,7 @@ export class SubjectController {
     @ApiOperation({ summary: 'Get subjects by level' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved subjects by level.' })
     @ApiBody({ type: GetSubjectByLevelDto })
-    @Roles(Role.ADMIN, Role.TEACHER)
+    @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('get-subjects-by-level')
     async getSubjectsByLevel(@Body() getSubjectByLevelDto: GetSubjectByLevelDto, @Req() req: any) {
@@ -37,7 +37,7 @@ export class SubjectController {
     @ApiOperation({ summary: 'Get a subject by ID' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved the subject.' })
     @ApiBody({ type: GetSubjectDto })
-    @Roles(Role.ADMIN, Role.TEACHER)
+    @Roles(Role.ADMIN, Role.TEACHER,Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('get-subject')
     async getSubject(@Body() getSubjectDto: GetSubjectDto, @Req() req: any) {
@@ -47,7 +47,7 @@ export class SubjectController {
 
     @ApiOperation({ summary: 'Get all subjects' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved all subjects.' })
-    @Roles(Role.ADMIN, Role.TEACHER, Role.USER)
+    @Roles(Role.ADMIN, Role.TEACHER, Role.USER,Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Get('get-all-subjects')
     async getAllSubjects(
@@ -61,7 +61,7 @@ export class SubjectController {
     @ApiOperation({ summary: 'Update a subject' })
     @ApiResponse({ status: 200, description: 'Successfully updated the subject.' })
     @ApiBody({ type: UpdateSubjectDto })
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Put('update-subject')
     async updateSubject(@Body() updateSubjectDto: UpdateSubjectDto, @Req() req: any) {
@@ -71,7 +71,7 @@ export class SubjectController {
     @ApiOperation({ summary: 'Create a new subject' })
     @ApiResponse({ status: 201, description: 'Successfully created the subject.' })
     @ApiBody({ type: CreateSubjectDto })
-    @Roles(Role.ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('create-subject')
     async createSubject(@Body() createSubjectDto: CreateSubjectDto, @Req() req: any) {

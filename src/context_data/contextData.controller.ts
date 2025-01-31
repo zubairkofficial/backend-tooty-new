@@ -19,7 +19,7 @@ export class ContextDataController {
   constructor(private readonly contextDataService: ContextDataService) { }
 
   @Post('upload')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(FileInterceptor('file', multerTemporaryStorageConfig))
   @ApiOperation({ summary: 'Upload a file' })
@@ -89,7 +89,7 @@ export class ContextDataController {
   }
 
   @Delete('delete')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Delete a file' })
   @ApiResponse({ status: 200, description: 'File deleted successfully.' })
@@ -98,8 +98,8 @@ export class ContextDataController {
     return this.contextDataService.deleteFile(deleteFileDto, req);
   }
 
-  @Get('files-by-school')
-  @Roles(Role.ADMIN)
+  @Get('files')
+  @Roles(Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get files uploaded by a user' })
   @ApiResponse({ status: 200, description: 'List of files uploaded by the user.' })
@@ -109,11 +109,11 @@ export class ContextDataController {
     @Query('page') page?: number, // Optional parameter
     @Query('limit') limit?: number, // Optional parameter
   ) {
-    return this.contextDataService.getAllFilesBySchool(req, page, limit);
+    return this.contextDataService.getAllFiles(req, page, limit);
   }
 
   @Post('files-by-subject')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get files by subject' })
   @ApiResponse({ status: 200, description: 'List of files by subject.' })
