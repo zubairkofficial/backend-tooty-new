@@ -8,7 +8,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/utils/roles.enum';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto } from './dto/teacher-profile.dto';
-import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
+import { AssignSchoolToAdminDto, UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
 import { Sequelize } from 'sequelize-typescript';
 
 @ApiTags('Profile') // Grouping the routes for 'Profile'
@@ -101,6 +101,15 @@ export class ProfileController {
   async getAdminProfile(@Param() params: { admin_id: string }, @Req() req: any) {
     const { admin_id } = params
     return this.profileServices.getAdminProfile(admin_id, req);
+  }
+
+  @Put('update-school-assignment')
+  @Roles(Role.SUPER_INTENDENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Update super Admin school' })
+  @ApiResponse({ status: 200, description: ' super Admin profile updated successfully.' })
+  async updateAdminSchool(@Body() assassignSchoolToAdminDto: AssignSchoolToAdminDto, @Req() req: any) {
+    return this.profileServices.assignSchoolToAdmin(assassignSchoolToAdminDto);
   }
 
   @Put('update-admin-profile')

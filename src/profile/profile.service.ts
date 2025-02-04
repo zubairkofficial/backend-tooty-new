@@ -5,7 +5,7 @@ import { Op } from 'sequelize';
 import { CreateJoinTeacherSubjectLevel, DeleteJoinTeacherSubjectLevel, GetJoinsTeacherSubjectLevelDto, GetTeacherProfileDto } from './dto/teacher-profile.dto';
 import { TeacherProfile } from './entities/teacher-profile.entity';
 import { JoinTeacherSubjectLevel } from './entities/join-teacher-subject-level.entity';
-import { UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
+import { AssignSchoolToAdminDto, UpdateAdminProfileDto, UpdateSuperAdminDto } from './dto/admin.dto';
 import { AdminProfile } from './entities/admin-profile.entity';
 import { SuperAdminProfile } from './entities/super-admin.entity';
 import { User } from 'src/user/entities/user.entity';
@@ -15,7 +15,7 @@ import { School } from 'src/school/entities/school.entity';
 import { ParentProfile } from './entities/parent-profile.entity';
 import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
 import { Level } from 'src/level/entity/level.entity';
-import { HttpStatus, HttpException } from '@nestjs/common';
+import { HttpStatus, HttpException, Injectable } from '@nestjs/common';
 import { Quiz } from 'src/quiz/entities/quiz.entity';
 import { Answer } from 'src/answer/entities/answer.entity';
 import { Question } from 'src/question/entities/question.entity';
@@ -23,8 +23,17 @@ import { Option } from 'src/option/entities/option.entity';
 import * as nodemailer from 'nodemailer'
 import { Transaction } from 'sequelize';
 import { SuperIntendentProfile } from './entities/super-intendent-profile.entity';
+import { Sequelize } from 'sequelize-typescript';
+import { JoinSchoolAdmin } from 'src/school/entities/join-school-admin.entity';
 
+@Injectable()
 export class ProfileService {
+
+    constructor(
+
+        private readonly sequelize: Sequelize
+
+    ) { }
 
 
     async getSuperAdminProfile(req: any) {
@@ -105,6 +114,48 @@ export class ProfileService {
                 error.message || 'Failed to update Super Admin profile',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
+        }
+    }
+
+    async assignSchoolToAdmin(assignSchoolToAdminDto: AssignSchoolToAdminDto) {
+        const transaction = await this.sequelize.transaction(); // Start Transaction
+        try {
+
+            const join_school_admin = await JoinSchoolAdmin.findOne({
+                where: {
+                    admin_id: {
+                        [Op.eq]: assignSchoolToAdminDto.admin_id
+                    }
+                },
+                transaction
+            })
+
+            if (!join_school_admin) {
+                await JoinSchoolAdmin.create({
+                    admin_id: assignSchoolToAdminDto.admin_id,
+                    school_id: assignSchoolToAdminDto.school_id
+                }, {
+                    transaction
+                })
+
+            } else {
+                join_school_admin.school_id = assignSchoolToAdminDto.school_id
+                await join_school_admin.save({ transaction })
+            }
+            await transaction.commit()
+
+            return {
+                statusCode: 200,
+                message: "School Assignment updated successfully"
+            }
+
+        } catch (error) {
+            await transaction.rollback()
+            throw new HttpException(
+                error.message || 'Failed to update admin school',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+
         }
     }
 
@@ -310,12 +361,18 @@ export class ProfileService {
     async getAllAdmins(req: any) {
         try {
             const admins = await User.findAll({
-                attributes: ["id", "name", "email", "contact", "role"],
-                // include: [
-                //     {
-                //         model: AdminProfile,
-                //     },
-                // ],
+                attributes: ["id", "name", "email", "contact", "role", "isVerified"],
+                include: [
+                    {
+                        model: AdminProfile,
+                        attributes: [],
+                        where: {
+                            district_id: {
+                                [Op.eq]: req.user.district_id
+                            }
+                        }
+                    },
+                ],
                 where: {
                     role: {
                         [Op.eq]: Role.ADMIN,

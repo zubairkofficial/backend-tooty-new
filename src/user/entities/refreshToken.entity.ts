@@ -23,7 +23,7 @@ export class RefreshToken extends Model {
   id: number;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.TEXT,
     unique: true,
   })
   refresh_token: string;

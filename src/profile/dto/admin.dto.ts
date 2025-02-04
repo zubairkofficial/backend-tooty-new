@@ -2,6 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
 import { number } from 'zod';
 
+export class AssignSchoolToAdminDto {
+    @IsNumber()
+    school_id: number
+
+    @IsNumber()
+    admin_id: number
+}
+
 
 export class UpdateAdminProfileDto {
     @IsNumber()

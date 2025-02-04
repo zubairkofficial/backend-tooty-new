@@ -43,7 +43,7 @@ export class UserController {
   constructor(private readonly userService: UserService) { }
 
   @Put('update-avatar')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.USER)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.USER, Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(FileInterceptor('avatar', multerStorageConfig)) // Ensure property matches Swagger
   @ApiOperation({ summary: 'Update user avatar' })

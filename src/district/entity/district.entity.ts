@@ -1,11 +1,13 @@
 import {
     Column,
     DataType,
+    HasMany,
     HasOne,
     Model,
     PrimaryKey,
     Table,
 } from 'sequelize-typescript';
+import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
 
 @Table({
@@ -28,4 +30,7 @@ export class District extends Model {
 
     @HasOne(() => SuperIntendentProfile)
     super_intendent!: SuperIntendentProfile
+
+    @HasMany(() => AdminProfile)
+    principals!: AdminProfile[]
 }

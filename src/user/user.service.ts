@@ -40,6 +40,8 @@ import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-prof
 import { InjectConnection } from '@nestjs/sequelize';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { District } from 'src/district/entity/district.entity';
+import { SuperAdminProfile } from 'src/profile/entities/super-admin.entity';
+import { JoinSchoolAdmin } from 'src/school/entities/join-school-admin.entity';
 
 @Injectable()
 export class UserService {
@@ -458,6 +460,8 @@ export class UserService {
   async createUser(createUserDto: CreateUserByAdminDto, req: any) {
     const transaction = await this.sequelize.transaction(); // Start Transaction
 
+    console.log("create user dto", createUserDto)
+
     try {
       // Check if email already exists
       const existingUser = await User.findOne({ where: { email: createUserDto.email }, paranoid: false, transaction });
@@ -496,7 +500,8 @@ export class UserService {
             throw new Error("UnAuthorized")
           }
           if (!createUserDto.school_id) throw new Error('School ID is required for Admin');
-          await AdminProfile.create({ id: user.id, user_id: user.id, school_id: createUserDto.school_id }, { transaction });
+          await AdminProfile.create({ id: user.id, user_id: user.id, district_id: req.user.district_id }, { transaction });
+          await JoinSchoolAdmin.create({ admin_id: user.id, school_id: createUserDto.school_id }, { transaction })
           break;
 
         case Role.USER:
@@ -560,6 +565,7 @@ export class UserService {
 
     } catch (error) {
       // Rollback Transaction in case of an error
+      console.error("error creating user", error)
       await transaction.rollback();
       throw new HttpException(error.message || 'Failed to create user', error.statusCode || HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -924,6 +930,7 @@ export class UserService {
     level_id: number | null;
     school_id: number | null;
     role: string
+    district_id: number | null
   }): Promise<string> {
     const refreshToken = SignRefreshToken(payload);
     try {
@@ -933,6 +940,7 @@ export class UserService {
       })
       return refreshToken;
     } catch (error) {
+      console.log("refresh token generte error", error)
       return '';
     }
   }
@@ -956,7 +964,7 @@ export class UserService {
       throw new Error('Token expired or invalid');
     }
 
-    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id ? verifyToken.level_id : null, school_id: verifyToken?.school_id ? verifyToken.school_id : null };
+    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id || null, school_id: verifyToken?.school_id || null, district_id: verifyToken.district_id || null };
 
     console.log("payload in refresh access token", payload)
     const accessToken = SignAccessToken(payload);
@@ -1023,9 +1031,33 @@ export class UserService {
           }
         }
       })
+      const school = await JoinSchoolAdmin.findOne({
+        where: {
+          admin_id: {
+            [Op.eq]: user.id
+          }
+        }
+      })
+      profile.school_id = school?.school_id
     }
     else if (user.role == Role.PARENT) {
       profile = await ParentProfile.findOne({
+        where: {
+          user_id: {
+            [Op.eq]: user.id
+          }
+        }
+      })
+    } else if (user.role == Role.SUPER_ADMIN) {
+      profile = await SuperAdminProfile.findOne({
+        where: {
+          user_id: {
+            [Op.eq]: user.id
+          }
+        }
+      })
+    } else if (user.role == Role.SUPER_INTENDENT) {
+      profile = await SuperIntendentProfile.findOne({
         where: {
           user_id: {
             [Op.eq]: user.id
@@ -1049,7 +1081,10 @@ export class UserService {
     })
 
     let refreshToken = ""
-    const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id ? profile.level_id : null, school_id: profile?.school_id ? profile.school_id : null };
+    console.log("profile", profile)
+
+    const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id || null, school_id: profile?.school_id || null, district_id: profile?.district_id || null };
+
     if (refresh_token_exist) {
       refreshToken = refresh_token_exist?.refresh_token
       console.log("using old refresh key")
@@ -1058,7 +1093,7 @@ export class UserService {
       console.log("using new refresh key")
     }
 
-    if (refreshToken == '') {
+    if (refreshToken === '') {
       throw new Error('Fialed to LogIn');
     }
     const accessToken = SignAccessToken(payload);
@@ -1282,19 +1317,23 @@ export class UserService {
           required: false,
           model: TeacherProfile,
           include: [{
-            required: true,
+            required: false,
             model: Subject
           }]
         },
         {
           required: false,
-          model: AdminProfile
+          model: AdminProfile,
+          include: [{
+            required: false,
+            model: School
+          }]
         },
         {
           required: false,
           model: SuperIntendentProfile,
           include: [{
-            required: true,
+            required: false,
             model: District
           }]
         },

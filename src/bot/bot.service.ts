@@ -27,6 +27,7 @@ import { z } from "zod";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
 import { File } from "src/context_data/entities/file.entity";
+import { Subject } from "src/subject/entity/subject.entity";
 
 const retrieveSchema = z.object({ query: z.string() });
 
@@ -584,7 +585,7 @@ export class BotService {
                     subject_id: {
                         [Op.eq]: Number(createBotDto.subject_id)
                     },
-                    
+
                     deletedAt: {
                         [Op.eq]: null
                     }
@@ -606,7 +607,7 @@ export class BotService {
                 bot_image_url: `${image.filename}`,
                 voice_model: createBotDto.voice_model,
                 subject_id: Number(createBotDto.subject_id),
-               
+
                 display_name: createBotDto.display_name
             }).then(async (bot) => {
                 await Join_BotContextData.create({
@@ -773,7 +774,18 @@ export class BotService {
             const offset = (page - 1) * limit;
 
             // Fetch the teacher's profile
-            const teacher_profile = await TeacherProfile.findOne({
+            const data = await TeacherProfile.findOne({
+                attributes: ["id"],
+                include: [{
+                    model: Subject,
+                    attributes: ["id"],
+                    include: [{
+                        model: Bot,
+                        attributes: {
+                            exclude: ["description"]
+                        }
+                    }]
+                }],
                 where: {
                     user_id: {
                         [Op.eq]: req.user.sub,
@@ -781,57 +793,57 @@ export class BotService {
                 },
             });
 
-            if (!teacher_profile) {
-                throw new Error("Teacher profile not found");
-            }
+            let botsData = []
 
-            // Fetch the teacher's subject and level data
-            const teacher_data = await JoinTeacherSubjectLevel.findAll({
-                where: {
-                    teacher_id: {
-                        [Op.eq]: teacher_profile.id,
-                    },
-                },
-            });
+            data.subjects.forEach(subject => {
+                botsData.push(subject.bot)
+            })
+            // if (!teacher_profile) {
+            //     throw new Error("Teacher profile not found");
+            // }
 
-            if (teacher_data.length === 0) {
-                throw new Error("No subjects or levels assigned to the teacher");
-            }
+            // // Fetch the teacher's subject and level data
+            // const teacher_data = await JoinTeacherSubjectLevel.findAll({
+            //     where: {
+            //         teacher_id: {
+            //             [Op.eq]: teacher_profile.id,
+            //         },
+            //     },
+            // });
+
+            // if (teacher_data.length === 0) {
+            //     throw new Error("No subjects or levels assigned to the teacher");
+            // }
 
             // Fetch paginated bots based on the teacher's subjects and levels
-            const { rows: bots, count: total } = await Bot.findAndCountAll({
-                where: {
-                    [Op.or]: teacher_data.map(({ subject_id, level_id }) => ({
-                        [Op.and]: [
-                            {
-                                subject_id: {
-                                    [Op.eq]: subject_id,
-                                },
-                            },
-                            {
-                                level_id: {
-                                    [Op.eq]: level_id,
-                                },
-                            },
-                           
-                        ],
-                    })),
-                },
-                limit, // Number of records to fetch
-                offset, // Starting point for the records
-                order: [['createdAt', 'DESC']], // Optional: Sort by creation date
-            });
+            // const { rows: bots, count: total } = await Bot.findAndCountAll({
+            //     include: [{
+            //         model: Subject,
+            //         attributes: [],
+            //         include: [{
+            //             model: TeacherProfile,
+            //             attributes: [],
+            //             where: {
+            //                 user_id: {
+            //                     [Op.eq]: req.user.sub
+            //                 }
+            //             }
+            //         }]
+            //     }],
 
-            // Calculate the total number of pages
-            const totalPages = Math.ceil(total / limit);
+            //     limit, // Number of records to fetch
+            //     offset, // Starting point for the records
+            //     order: [['createdAt', 'DESC']], // Optional: Sort by creation date
+            // });
+
+            // // Calculate the total number of pages
+            // const totalPages = Math.ceil(total / limit);
 
             return {
                 statusCode: 200,
                 message: "Bots fetched successfully",
-                bots, // Paginated bots
-                total, // Total number of bots
-                page, // Current page
-                totalPages, // Total number of pages
+                bots: botsData, // Paginated bots
+
             };
         } catch (error) {
             this.logger.error("Error fetching bots: ", error.message);
@@ -843,7 +855,7 @@ export class BotService {
         try {
             // Calculate the offset based on the page and limit
             const offset = (page - 1) * limit;
-           
+
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
                 limit, // Number of records to fetch
@@ -877,7 +889,7 @@ export class BotService {
 
             // Fetch paginated data from the database
             const { rows: bots, count: total } = await Bot.findAndCountAll({
-              
+
                 limit, // Number of records to fetch
                 offset, // Starting point for the records
                 order: [['createdAt', 'DESC']], // Optional: Sort by creation date
@@ -920,7 +932,7 @@ export class BotService {
                         level_id: {
                             [Op.eq]: teacher.level_id
                         },
-                       
+
                     },
                     attributes: {
                         exclude: ["description", "ai_model", "voice_model", "level_id", "subject_id", "user_id", "createdAt", "updatedAt", "deletedAt"]
@@ -961,7 +973,7 @@ export class BotService {
                     level_id: {
                         [Op.eq]: getBotByLevelSubject.level_id
                     },
-                    
+
                 }
             })
 
