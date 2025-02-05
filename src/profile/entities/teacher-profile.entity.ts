@@ -1,4 +1,5 @@
 import {
+    BeforeUpdate,
     BelongsTo,
     BelongsToMany,
     Column,
@@ -15,6 +16,7 @@ import { School } from 'src/school/entities/school.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { User } from 'src/user/entities/user.entity';
 import { JoinTeacherSubjectLevel } from './join-teacher-subject-level.entity';
+import { Op } from 'sequelize';
 
 
 @Table({
@@ -69,4 +71,17 @@ export class TeacherProfile extends Model {
 
     // @BelongsToMany(() => Level, () => JoinTeacherSubjectLevel)
     // level_join_table!: Level[]
+
+    @BeforeUpdate
+    static async removeSubjectOnLevelChange(instance: TeacherProfile) {
+        if (instance.changed("level_id")) {
+            await JoinTeacherSubjectLevel.destroy({
+                where: {
+                    teacher_id: {
+                        [Op.eq]: instance.id
+                    }
+                }
+            })
+        }
+    }
 }

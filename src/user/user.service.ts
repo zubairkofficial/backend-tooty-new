@@ -326,132 +326,129 @@ export class UserService {
   }
 
 
-  async deleteTeacher(deleteUserDto: DeleteUserDto) {
+  private async deleteUser(id: number, district_id: number | null | undefined, school_id: number | null | undefined) {
     try {
-
       await User.destroy({
         where: {
           id: {
-            [Op.eq]: deleteUserDto.user_id
+            [Op.eq]: id
           }
         }
       })
-
-      // const join_teacher_suject_level = await JoinTeacherSubjectLevel.findAll({
-      //   where: {
-      //     teacher_id: {
-      //       [Op.eq]: deleteUserDto.user_id
-      //     }
-      //   }
-      // })
-      // if (join_teacher_suject_level.length > 0) {
-      //   await JoinTeacherSubjectLevel.destroy({
-      //     where: {
-      //       teacher_id: {
-      //         [Op.eq]: deleteUserDto.user_id
-      //       }
-      //     }
-      //   })
-      // }
-
-
-      // await TeacherProfile.destroy({
-      //   where: {
-      //     user_id: {
-      //       [Op.eq]: deleteUserDto.user_id
-      //     }
-      //   }
-      // }).then(async () => {
-      //   await Otp.destroy({
-      //     where: {
-      //       user_id: {
-      //         [Op.eq]: deleteUserDto.user_id
-      //       }
-      //     }
-      //   })
-      //   await Chat.destroy({
-      //     where: {
-      //       user_id: {
-      //         [Op.eq]: deleteUserDto.user_id
-      //       }
-      //     }
-      //   })
-      //   await RefreshToken.destroy({
-      //     where: {
-      //       user_id: {
-      //         [Op.eq]: deleteUserDto.user_id
-      //       }
-      //     }
-      //   })
-
-      // })
-
-
-
       return {
         statusCode: 200,
-        message: "success deleting user"
+        message: "User deleted successfully"
       }
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new Error("Error deleting user" + error.message)
     }
   }
 
-  async deleteUser(deleteUserDto: DeleteUserDto) {
+  async deleteUserService(deleteUserDto: DeleteUserDto, req: any) {
+    console.log(req.user)
     try {
-
-      await StudentProfile.destroy({
-        where: {
-          user_id: {
-            [Op.eq]: deleteUserDto.user_id
-          }
-        }
-      }).then(async () => {
-
-
-
-        await User.destroy({
-          where: {
-            id: {
-              [Op.eq]: deleteUserDto.user_id
-            }
-          }
-        })
+      const user = await User.findByPk(deleteUserDto.user_id, {
+        include: [{
+          required: false,
+          model: SuperIntendentProfile
+        },
+        {
+          required: false,
+          model: AdminProfile
+        },
+        {
+          required: false,
+          model: TeacherProfile
+        },
+        {
+          required: false,
+          model: StudentProfile
+        },
+        {
+          required: false,
+          model: StudentProfile
+        }]
       })
+
+      switch (user.role) {
+
+        case Role.SUPER_INTENDENT:
+          if (req.user.role !== Role.SUPER_ADMIN) {
+            throw new Error("Invalid Role")
+          }
+          await this.deleteUser(deleteUserDto.user_id, null, null);
+          break;
+
+        case Role.ADMIN:
+          if (req.user.role !== Role.SUPER_INTENDENT) {
+            throw new Error("Invalid Role")
+          }
+          if (!user.admin_profile.district_id) {
+            console.log("could not find district_id")
+            throw new Error("Error deleting principal")
+          }
+          if (user.admin_profile.district_id !== req.user.district_id) {
+            throw new Error("UnAuthorized - district_id dont match")
+          }
+          await this.deleteUser(deleteUserDto.user_id, req.user.district_id, null);
+          break;
+
+        case Role.USER:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("Invalid Role")
+          }
+          if (!user.student_profile.school_id) {
+            console.log("could not find school_id")
+            throw new Error("Error deleting student")
+          }
+          if (user.student_profile.school_id !== req.user.school_id) {
+            throw new Error("UnAuthorized - school_id dont match")
+          }
+          await this.deleteUser(deleteUserDto.user_id, null, req.user.school_id);
+          break;
+
+        case Role.TEACHER:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("Invalid Role")
+          }
+          if (!user.teacher_profile.school_id) {
+            console.log("could not find school_id")
+            throw new Error("Error deleting teacher")
+          }
+          if (user.teacher_profile.school_id !== req.user.school_id) {
+            throw new Error("UnAuthorized - school_id dont match")
+          }
+          await this.deleteUser(deleteUserDto.user_id, null, req.user.school_id);
+          break;
+
+        case Role.PARENT:
+          if (req.user.role !== Role.ADMIN) {
+            throw new Error("Invalid Role")
+          }
+          if (!user.parent_profile.school_id) {
+            console.log("could not find school_id")
+            throw new Error("Error deleting parent")
+          }
+          if (user.parent_profile.school_id !== req.user.school_id) {
+            throw new Error("UnAuthorized - school_id dont match")
+          }
+          await this.deleteUser(deleteUserDto.user_id, null, req.user.school_id);
+          break;
+
+
+
+        default:
+          throw new HttpException('Invalid user Role', HttpStatus.BAD_REQUEST);
+
+      }
+
       return {
         statusCode: 200,
-        message: "success deleting user"
+        message: "User deleted successfully"
       }
+
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-  async deleteParent(deleteUserDto: DeleteUserDto) {
-    try {
-
-      await ParentProfile.destroy({
-        where: {
-          user_id: {
-            [Op.eq]: deleteUserDto.user_id
-          }
-        }
-      }).then(async () => {
-
-
-
-        await User.destroy({
-          where: {
-            id: {
-              [Op.eq]: deleteUserDto.user_id
-            }
-          }
-        })
-      })
-      return {
-        statusCode: 200,
-        message: "success deleting parent"
-      }
-    } catch (error) {
+      console.log("error deleting user", error)
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -1136,7 +1133,7 @@ export class UserService {
             {
               model: StudentProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }],
@@ -1150,7 +1147,7 @@ export class UserService {
             {
               model: TeacherProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }],
@@ -1164,7 +1161,7 @@ export class UserService {
             {
               model: ParentProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }],
@@ -1196,42 +1193,45 @@ export class UserService {
             {
               model: StudentProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }]
               ,
               where: {
-                role: {
-                  [Op.eq]: role, // Filter users by role
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
                 }
               },
             },
             {
               model: TeacherProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }]
               ,
               where: {
-                role: {
-                  [Op.eq]: role, // Filter users by role
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
                 }
               },
             },
             {
               model: ParentProfile,
               required: false,
-              attributes: [],
+              attributes: ["id", "school_id"],
               include: [{
                 model: School
               }]
               ,
               where: {
-                role: {
-                  [Op.eq]: role, // Filter users by role
+
+                school_id: {
+                  [Op.eq]: req.user.school_id
                 }
               },
             }

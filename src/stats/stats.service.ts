@@ -40,9 +40,9 @@ export class StatsService {
       } else if (role === Role.ADMIN) {
         return this.getAdminStats(req.user.school_id);
       } else if (role === Role.TEACHER) {
-        return this.getTeacherStats(req.user.sub);
+        return this.getTeacherStats(req);
       } else if (role === Role.USER) {
-        return this.getUserStats(req.user.sub);
+        return this.getUserStats(req);
       } else {
         throw new Error('Unauthorized role');
       }
@@ -167,7 +167,8 @@ export class StatsService {
       const teachers = await this.teacherProfileModel.count({ where: { school_id: schoolId } });
       const students = await this.studentProfileModel.count({ where: { school_id: schoolId } });
 
-      const levels = await TeacherProfile.count({
+
+      const student_levels = await StudentProfile.findAll({
         where: {
           school_id: {
             [Op.eq]: schoolId
@@ -175,12 +176,15 @@ export class StatsService {
         },
         include: [
           {
+            required: true,
             model: Level,
-            attributes: ['id'],
-          }],
-        distinct: true
+
+          }
+        ]
+
       })
-      const subjects = await TeacherProfile.count({
+
+      const teacher_levels = await TeacherProfile.findAll({
         where: {
           school_id: {
             [Op.eq]: schoolId
@@ -188,24 +192,78 @@ export class StatsService {
         },
         include: [
           {
-            model: Subject,
-            attributes: ['id'],  // Only count unique subject IDs
+            required: true,
+            model: Level,
+
+          }
+        ]
+
+      })
+
+      // Merge and get unique level_ids
+      const uniqueLevels = new Set([
+        ...teacher_levels.map(t => t.level_id),
+        ...student_levels.map(s => s.level_id)
+      ]);
+
+      console.log(uniqueLevels)
+      const subjects = await Subject.count({
+
+        include: [
+          {
+            model: TeacherProfile,
+            attributes: ['id', "school_id"],  // Only count unique subject IDs
+            where: {
+              school_id: {
+                [Op.eq]: schoolId
+              }
+            },
           }],
         distinct: true
       })
-      const quizzes = await this.quizModel.count({
+
+      const bots = await Subject.count({
         include: [
           {
-            model: this.subjectModel,
-            where: { school_id: schoolId }, // Filter by school_id in the Subject model
+            required: true,
+            model: TeacherProfile,
+            attributes: ['id', "school_id"],  // Only count unique subject IDs
+            where: {
+              school_id: {
+                [Op.eq]: schoolId
+              }
+            },
+
+          },
+          {
+            required: true,
+            model: Bot,
+          }],
+        distinct: true
+      })
+
+      const quizzes = await Quiz.count({
+        include: [
+          {
+            required: true,
+            model: TeacherProfile,
+            attributes: ['id', "school_id"],  // Only count unique subject IDs
+            where: {
+              school_id: {
+                [Op.eq]: schoolId
+              }
+            },
+
           },
         ],
-      });
+        distinct: true
+      })
+
       return {
         teachers,
         students,
-        bots: subjects,
-        levels,
+        bots,
+        levels: uniqueLevels.size,
         subjects,
         quizzes,
       };
@@ -214,57 +272,47 @@ export class StatsService {
     }
   }
 
-  private async getTeacherStats(teacherId: number) {
+  private async getTeacherStats(req: any) {
     try {
-      const teacherProfile = await this.teacherProfileModel.findOne({
-        where: { user_id: teacherId },
-        include: [{ model: this.subjectModel, through: { attributes: [] } }], // Include associated subjects
+
+
+      const students = await this.studentProfileModel.count({ where: { level_id: { [Op.eq]: req.user.level_id } } });
+
+      const quizzes = await this.quizModel.count({
+        where: {
+          teacher_id: {
+            [Op.eq]: req.user.sub
+          }
+        }
       });
-
-      if (!teacherProfile) {
-        throw new Error('Teacher profile not found');
-      }
-
-      const levelId = teacherProfile.level_id;
-
-      // Get the first subject associated with the teacher (or use your own logic)
-      const subjectId = teacherProfile.subjects?.[0]?.id;
-      // if (!subjectId) {
-      //   throw new Error('No subject found for the teacher');
-      // }
-      let quizzes = 0
-      const students = await this.studentProfileModel.count({ where: { level_id: levelId } });
-
-      if (subjectId) quizzes = await this.quizModel.count({ where: { level_id: levelId, subject_id: subjectId } });
+      const subjects = await Subject.count({
+        include: [{
+          model: TeacherProfile,
+          where: {
+            id: {
+              [Op.eq]: req.user.sub
+            }
+          }
+        }]
+      })
 
       return {
         students,
-
         quizzes,
+        subjects
       };
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
-  private async getUserStats(userId: number) {
+  private async getUserStats(req: any) {
     try {
-      // Find the student profile for the user
-      const studentProfile = await this.studentProfileModel.findOne({
-        where: { user_id: userId },
-        include: [{ model: Level, include: [{ model: School }] }], // Include level and school
-      });
 
-      if (!studentProfile) {
-        throw new Error('Student profile not found');
-      }
 
-      const levelId = studentProfile.level_id;
-      const schoolId = studentProfile.school_id;
-
-      const subjets = await Subject.count({
+      const subjects = await Subject.count({
         where: {
           level_id: {
-            [Op.eq]: levelId
+            [Op.eq]: req.user.level_id
           }
         }
       })
@@ -273,15 +321,25 @@ export class StatsService {
         include: [
           {
             model: Subject
-
           },
         ],
-        where: { level_id: levelId }, // Filter by level_id in the Quiz model
+        where: {
+          level_id: {
+            [Op.eq]: req.user.level_id
+          }
+        },
       });
 
       // Quizzes attempted by the student
       const completedQuizzes = await this.quizAttemptModel.count({
-        where: { student_id: studentProfile.id },
+        where: {
+          student_id: {
+            [Op.eq]: req.user.sub
+          },
+          submitted: {
+            [Op.eq]: true
+          }
+        },
       });
 
       // Pending quizzes = total quizzes - completed quizzes
@@ -291,7 +349,7 @@ export class StatsService {
         totalQuizzes,
         completedQuizzes,
         pendingQuizzes,
-        subjets
+        subjects
       };
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);

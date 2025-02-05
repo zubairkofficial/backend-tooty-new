@@ -164,34 +164,16 @@ export class UserController {
   // async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto, @Req() req: any) {
   //   return this.userService.createUser(createUserByAdminDto, req);
   // }
-  @Delete('delete-parent')
-  @Roles(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Delete a user' })
-  @ApiBearerAuth('access-token')// JWT Bearer authentication
-  @ApiResponse({ status: 200, description: 'User deleted successfully' })
-  async deleteParent(@Body() deleteUserDto: DeleteUserDto) {
-    return this.userService.deleteParent(deleteUserDto);
-  }
+
 
   @Delete('delete-user')
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPER_ADMIN, Role.SUPER_INTENDENT, Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Delete a user' })
   @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
-  async deleteUser(@Body() deleteUserDto: DeleteUserDto) {
-    return this.userService.deleteUser(deleteUserDto);
-  }
-
-  @Delete('delete-teacher')
-  @Roles(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')// JWT Bearer authentication
-  @ApiOperation({ summary: 'Delete a teacher' })
-  @ApiResponse({ status: 200, description: 'Teacher deleted successfully' })
-  async deleteTeacher(@Body() deleteUserDto: DeleteUserDto) {
-    return this.userService.deleteTeacher(deleteUserDto);
+  async deleteUser(@Body() deleteUserDto: DeleteUserDto, @Req() req: any) {
+    return this.userService.deleteUserService(deleteUserDto, req);
   }
 
   @Post('signup')
