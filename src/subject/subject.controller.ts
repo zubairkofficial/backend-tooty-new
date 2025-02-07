@@ -37,11 +37,11 @@ export class SubjectController {
     @ApiOperation({ summary: 'Get a subject by ID' })
     @ApiResponse({ status: 200, description: 'Successfully retrieved the subject.' })
     @ApiBody({ type: GetSubjectDto })
-    @Roles(Role.ADMIN, Role.TEACHER,Role.SUPER_ADMIN)
+    @Roles(Role.TEACHER,Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('get-subject')
     async getSubject(@Body() getSubjectDto: GetSubjectDto, @Req() req: any) {
-        return this.subjectServices.getSubject(getSubjectDto);
+        return this.subjectServices.getSubject(getSubjectDto, req);
     }
 
 

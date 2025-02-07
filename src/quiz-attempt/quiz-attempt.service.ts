@@ -14,7 +14,10 @@ import { Subject } from 'src/subject/entity/subject.entity';
 import { Bot } from 'src/bot/entities/bot.entity';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
-import { Op } from 'sequelize';
+import { Model, Op } from 'sequelize';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { School } from 'src/school/entities/school.entity';
+import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 
 const outputSchema = z.object({
   question_obtained_marks: z.number(),
@@ -37,32 +40,149 @@ export class QuizAttemptService {
   ) { }
 
 
+  async getQuizAttemptsByStudent(req: any) {
 
-  async getQuizAttemptDetailById(params: any) {
+    try {
+
+      const data = await QuizAttempt.findAll({
+        where: {
+          student_id: {
+            [Op.eq]: req.user.sub
+          },
+          marked: {
+            [Op.eq]: true
+          }
+        },
+
+        include: [
+
+          {
+            model: Quiz,
+            as: 'quiz',
+          },
+        ],
+
+
+      });
+
+      return {
+        statusCode: 200,
+        data
+      }
+
+    } catch (error) {
+      throw new HttpException(
+        error.message || "Error fetching quiz attempts by student and subject.",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+
+  async getQuizAttemptsByStudentSubject(params: any, req: any) {
+    if (!params.student_id || !params.subject_id) {
+      throw new Error("subject_id and student_id must be defined in params: /:subject_id/:student_id")
+    }
+
+    try {
+
+
+      const teacher_has_subject = await Subject.findByPk(Number(params.subject_id), {
+        include: [{
+          required: true,
+          model: TeacherProfile,
+          where: {
+            id: {
+              [Op.eq]: req.user.sub
+            }
+          }
+        }]
+      })
+      console.log("teacher_has_subject", teacher_has_subject)
+      if (teacher_has_subject === null || teacher_has_subject === undefined) {
+        throw new Error("Subject is UnAvailable to teacher")
+      }
+
+      const data = await QuizAttempt.findAll({
+        where: {
+          student_id: {
+            [Op.eq]: Number(params.student_id)
+          },
+
+        },
+        order: [
+          ['createdAt', 'DESC']
+        ],
+        include: [
+          {
+            model: Quiz,
+            as: 'quiz',
+            where: {
+              subject_id: {
+                [Op.eq]: Number(params.subject_id)
+              },
+              teacher_id: {
+                [Op.eq]: req.user.sub
+              }
+            },
+          },
+        ],
+      })
+
+      return {
+        statusCode: 200,
+        data
+      }
+
+    } catch (error) {
+      throw new HttpException(
+        error.message || "Error fetching quiz attempts by student and subject.",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+
+  async getQuizAttemptDetailById(params: any, req: any) {
+    const attemptId = Number(params.attempt_id);
+
+    if (isNaN(attemptId)) {
+      console.error('Invalid attempt_id:', params.attempt_id);
+      throw new Error("Invalid attempt_id provided");
+    }
     try {
       const quiz = await QuizAttempt.findOne({
         where: {
           id: {
-            [Op.eq]: params.attempt_id
+            [Op.eq]: attemptId
           }
         },
 
         include: [
           {
+            required: true,
             model: Quiz,
             as: 'quiz',
+            where: {
+              teacher_id: {
+                [Op.eq]: req.user.sub
+              }
+            },
+            include: [{
+              model: Question,
+              include: [{
+                model: Option
+              }]
+            }]
 
           },
+
           {
-            required: false,
+            required: true,
             model: Answer,
             as: 'answers',
 
             include: [
-              {
-                required: false,
-                model: Option
-              },
               {
 
                 model: Question,
@@ -73,13 +193,10 @@ export class QuizAttemptService {
               }]
           },
         ],
-      },);
+      });
 
-      if (!quiz) {
-        return {
-          statusCode: HttpStatus.NOT_FOUND,
-          message: `No quiz attempt found for ID: ${params.attempt_id}`,
-        };
+      if (quiz === null || quiz === undefined) {
+        throw new Error("No quiz Attempt found for this id")
       }
 
 

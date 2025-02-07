@@ -727,34 +727,17 @@ export class ProfileService {
                     {
                         model: User,
                         as: 'user',
+                        attributes: {
+                            exclude: ["password"]
+                        }
                     },
-                    {
-                        required: false,
-                        model: QuizAttempt,
-                        as: 'attempted_quizes',
-                        order: [
-                            ['createdAt', 'DESC']
-                        ],
-                        include: [
-                            {
-                                model: Quiz,
-                                as: 'quiz',
 
-                            },
-
-                        ],
-                    },
                 ],
             });
 
             if (!studentProfile) {
-                return {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: `No student profile found for ID: ${params.student_id}`,
-                };
+                throw new Error("No Student Found")
             }
-
-            console.log('Fetched student profile:', studentProfile);
 
             return {
                 statusCode: HttpStatus.OK,

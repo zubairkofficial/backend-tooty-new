@@ -1,4 +1,4 @@
-import { HttpStatus, Logger, HttpException } from "@nestjs/common";
+import { HttpStatus, Logger, HttpException, Injectable } from "@nestjs/common";
 import { CreateBotDto, DeleteBotDto, GetBotByLevelSubject, GetBotBySubjectDto, GetBotDto, QueryBot, UpdateBotDto } from "./dto/create-bot.dto";
 import { Bot } from "./entities/bot.entity";
 import { CreateBotContextDto, DeleteBotContextDto, GetBotContextDto, UpdateBotContextDto } from "./dto/create-Join-bot-data.dto";
@@ -9,12 +9,12 @@ import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { tool } from "@langchain/core/tools";
 import { Response } from "express";
-import { Sequelize } from "sequelize-typescript";
+
 import { Chat } from "src/chat/entities/chat.entity";
 import { GenerateImageDto } from "./dto/generateImage.dto";
 import * as path from 'path'
 import * as fs from 'fs'
-import axios from 'axios'
+import axios, { HttpStatusCode } from 'axios'
 import { ChatService } from "src/chat/chat.service";
 import { Op } from "sequelize";
 import { ApiService } from "src/api/api.service";
@@ -28,6 +28,7 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { SuperAdminProfile } from "src/profile/entities/super-admin.entity";
 import { File } from "src/context_data/entities/file.entity";
 import { Subject } from "src/subject/entity/subject.entity";
+import { Sequelize } from "sequelize-typescript";
 
 const retrieveSchema = z.object({ query: z.string() });
 
@@ -47,13 +48,12 @@ const outputSchema = z.object({
 
 });
 
+@Injectable()
 export class BotService {
-
+    private readonly logger = new Logger('BotService')
     constructor(
-        private readonly logger = new Logger('BotService'),
+
         private readonly sequelize: Sequelize,
-        private readonly chatService: ChatService,
-        private readonly apiServices: ApiService
     ) { }
 
     async generateImage(generateImageDto: GenerateImageDto, req: any) {
@@ -573,32 +573,34 @@ export class BotService {
         }
     }
 
-    async createBot(image: Express.Multer.File, createBotDto: CreateBotDto, req: any, res: Response) {
-        console.log(createBotDto)
 
-        const bot_already_exist = await Bot.findOne({
-            where: {
-                [Op.and]: {
-                    level_id: {
-                        [Op.eq]: Number(createBotDto.level_id)
-                    },
-                    subject_id: {
-                        [Op.eq]: Number(createBotDto.subject_id)
-                    },
+    async createBot(image: Express.Multer.File, createBotDto: CreateBotDto, req: any) {
+        console.log(createBotDto);
+        const transaction = await this.sequelize.transaction();
 
-                    deletedAt: {
-                        [Op.eq]: null
-                    }
-                }
-
-            }
-        })
-        if (bot_already_exist) {
-            res.status(HttpStatus.NOT_ACCEPTABLE).send({ error: "Bot with level and subject already exist" })
-            return
-        }
         try {
-            await Bot.create({
+            const bot_already_exist = await Bot.findOne({
+                where: {
+                    [Op.and]: {
+                        level_id: {
+                            [Op.eq]: Number(createBotDto.level_id)
+                        },
+                        subject_id: {
+                            [Op.eq]: Number(createBotDto.subject_id)
+                        },
+                        deletedAt: {
+                            [Op.eq]: null
+                        }
+                    }
+                },
+                transaction
+            });
+
+            if (bot_already_exist) {
+                throw new Error("Bot with level and subject already exist");
+            }
+
+            const bot = await Bot.create({
                 name: createBotDto.name,
                 description: createBotDto.description,
                 ai_model: createBotDto.ai_model,
@@ -607,26 +609,30 @@ export class BotService {
                 bot_image_url: `${image.filename}`,
                 voice_model: createBotDto.voice_model,
                 subject_id: Number(createBotDto.subject_id),
-
                 display_name: createBotDto.display_name
-            }).then(async (bot) => {
-                await Join_BotContextData.create({
-                    bot_id: bot.id,
-                    file_id: Number(createBotDto.file_id)
-                })
+            }, { transaction });
 
-            })
-            res.status(HttpStatus.OK).send({
+            await Join_BotContextData.create({
+                bot_id: bot.id,
+                file_id: Number(createBotDto.file_id)
+            }, { transaction });
+
+            await transaction.commit();
+
+            // Return the response immediately after commit
+            return {
                 statusCode: 200,
-                message: "bot created successfully"
-            })
-            return
+                message: "Bot Created successfully"
+            };
         } catch (error) {
-            console.log(error)
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ error: error.message || "Error creating bot in DB" });
-            return;
+            await transaction.rollback();
+            console.log(error);
+            // Make sure an error is thrown if something fails
+            throw new HttpException(error.message || "Failed to create bot", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+
 
     async deleteBot(deleteBotDto: DeleteBotDto) {
         try {

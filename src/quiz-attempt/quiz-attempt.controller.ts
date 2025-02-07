@@ -12,12 +12,31 @@ export class QuizAttemptController {
   constructor(private readonly quizAttemptService: QuizAttemptService) { }
 
 
+
   @Get('get-quiz-attempt-detail/:attempt_id')
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async getQuizAttemptDetailById(@Param() params: any) {
-    return this.quizAttemptService.getQuizAttemptDetailById(params);
+  async getQuizAttemptDetailById(@Param() params: any, @Req() req: any) {
+
+    return this.quizAttemptService.getQuizAttemptDetailById(params, req);
   }
+
+
+  @Get('/:subject_id/:student_id')
+  @Roles(Role.TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getQuizAttemptsByStudentSubject(@Param() params: any, @Req() req: any) {
+    return this.quizAttemptService.getQuizAttemptsByStudentSubject(params, req);
+  }
+
+
+  @Get('student-quiz-history')
+  @Roles(Role.USER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getQuizAttemptsByStudent(@Req() req: any) {
+    return this.quizAttemptService.getQuizAttemptsByStudent(req);
+  }
+
 
 
   @Post('create-submition')

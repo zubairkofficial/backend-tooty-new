@@ -1132,45 +1132,48 @@ export class UserService {
           include: [
             {
               model: StudentProfile,
-              required: false,
+              required: role === Role.USER,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }],
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             },
             {
               model: TeacherProfile,
-              required: false,
+              required: role === Role.TEACHER,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }],
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             },
             {
               model: ParentProfile,
-              required: false,
+              required: role === Role.PARENT,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }],
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             }
           ],
           attributes: {
@@ -1192,48 +1195,48 @@ export class UserService {
           include: [
             {
               model: StudentProfile,
-              required: false,
+              required: role === Role.USER,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }]
-              ,
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             },
             {
               model: TeacherProfile,
-              required: false,
+              required: role === Role.TEACHER,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }]
-              ,
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             },
             {
               model: ParentProfile,
-              required: false,
+              required: role === Role.PARENT,
               attributes: ["id", "school_id"],
               include: [{
-                model: School
-              }]
-              ,
-              where: {
+                model: School,
+                where: {
 
-                school_id: {
-                  [Op.eq]: req.user.school_id
-                }
-              },
+                  id: {
+                    [Op.eq]: req.user.school_id
+                  }
+                },
+              }],
+
             }
           ],
           attributes: {

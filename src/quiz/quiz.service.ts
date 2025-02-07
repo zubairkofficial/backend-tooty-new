@@ -12,6 +12,7 @@ import { Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript'
 import { Role } from 'src/utils/roles.enum';
 import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 
 @Injectable()
 export class QuizService {
@@ -108,7 +109,10 @@ export class QuizService {
       quiz.total_score = totalScore;
       await quiz.save();
 
-      return quiz;
+      return {
+        statusCode: 200,
+        message: "Quiz created successfully"
+      }
     } catch (error) {
       throw new HttpException(error.message || 'Failed to create quiz', HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -254,7 +258,10 @@ export class QuizService {
       await quiz.save({ transaction });
 
       await transaction.commit();
-      return quiz;
+      return {
+        statusCode: 200,
+        messag: "quiz edited successfully"
+      }
     } catch (error) {
       await transaction.rollback();
       throw new HttpException(error.message || 'Failed to edit quiz', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -262,35 +269,50 @@ export class QuizService {
   }
 
 
-  async findAllQuizByLevel(req) {
+  async findAllQuizByLevel(req: any) {
     try {
       if (req.user.level_id == null) {
         throw new Error("Level is not assigned to user")
-
       }
-      const data = await this.quizModel.findAll({
-        include: [{
-          model: Subject
-        }, {
-          model: QuizAttempt,
-          required: false, // This allows for quizzes without attempts to be included
-          where: {
-            student_id: {
-              [Op.eq]: req.user.sub
-            },
+      const data = await Quiz.findAll({
+        include: [
+          {
+            required: true,
+            model: Subject
+          },
+          {
+            required: true,
+            model: TeacherProfile,
+            where: {
+              level_id: {
+                [Op.eq]: req.user.level_id
+              },
+              school_id: {
+                [Op.eq]: req.user.school_id
+              }
+
+            }
+          },
+          {
+            model: QuizAttempt,
+            required: false, // This allows for quizzes without attempts to be included
+            where: {
+              student_id: {
+                [Op.eq]: req.user.sub
+              },
+            }
           }
-        }],
+        ],
         order: [
           ["id", "DESC"]
         ],
-        where: {
-          level_id: {
-            [Op.eq]: req.user.level_id
-          }
-        },
+
       });
 
-      return data
+      return {
+        statusCode: 200,
+        data
+      }
     } catch (error) {
       throw new HttpException(error.message || 'Failed to fetch quizzes by level', HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -317,7 +339,10 @@ export class QuizService {
 
       });
 
-      return data
+      return {
+        statusCode: 200,
+        data
+      }
     } catch (error) {
       throw new HttpException(error.message || 'Failed to fetch quizzes', HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -370,7 +395,10 @@ export class QuizService {
         throw new NotFoundException(`Quiz with ID ${quiz_id} not found.`);
       }
 
-      return quiz;
+      return {
+        statusCode: 200,
+        data: quiz
+      }
     } catch (error) {
       // Re-throw the error if it's already an HTTP exception
       if (error instanceof HttpException) {

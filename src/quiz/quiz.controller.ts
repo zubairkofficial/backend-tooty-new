@@ -15,13 +15,13 @@ export class QuizController {
   @Post()
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async create(@Body() createQuizDto: CreateQuizDto, @Req() req: any): Promise<Quiz> {
-    return await this.quizService.create(createQuizDto, req);
+  async create(@Body() createQuizDto: CreateQuizDto, @Req() req: any) {
+    return  this.quizService.create(createQuizDto, req);
   }
 
 
   @Delete(':quizId')
-  @Roles(Role.TEACHER, Role.USER)
+  @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async deleteQuiz(@Param('quizId') quizId: number) {
     return this.quizService.deleteQuiz(Number(quizId));
@@ -35,7 +35,7 @@ export class QuizController {
 
     @Body() editQuizDto: EditQuizDto,
     @Req() req: any,
-  ): Promise<Quiz> {
+  ) {
     return this.quizService.editQuiz(editQuizDto, req);
   }
 
@@ -44,7 +44,7 @@ export class QuizController {
   @Get()
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async findAll(@Req() req: any): Promise<Quiz[]> {
+  async findAll(@Req() req: any){
     return this.quizService.findAll(req);
   }
 
@@ -52,7 +52,7 @@ export class QuizController {
   @Get('/get-quiz-by-level')
   @Roles(Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async findAllQuizByLevel(@Req() req: any): Promise<Quiz[]> {
+  async findAllQuizByLevel(@Req() req: any) {
     return this.quizService.findAllQuizByLevel(req);
   }
   @Get(':id')

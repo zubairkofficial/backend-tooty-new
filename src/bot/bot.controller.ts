@@ -52,12 +52,12 @@ export class BotController {
             }
         }
     })
-    async createBot(@UploadedFile() image: Express.Multer.File, @Body() createBotDto: CreateBotDto, @Req() req: any, @Res() res: Response): Promise<any> {
+    async createBot(@UploadedFile() image: Express.Multer.File, @Body() createBotDto: CreateBotDto, @Req() req: any) {
         if (!image) {
             return { message: 'No image uploaded' };
         }
 
-        return this.botService.createBot(image, createBotDto, req, res)
+        return this.botService.createBot(image, createBotDto, req)
 
     }
 

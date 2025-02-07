@@ -8,6 +8,9 @@ import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { User } from 'src/user/entities/user.entity';
 import { Level } from 'src/level/entity/level.entity';
 import { School } from 'src/school/entities/school.entity';
+import { Bot } from 'src/bot/entities/bot.entity';
+import { Role } from 'src/utils/roles.enum';
+import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 
 
 export class SubjectService {
@@ -70,7 +73,7 @@ export class SubjectService {
             [Op.eq]: getSubjectByLevelDto.level_id,
 
           },
-         
+
         },
       });
 
@@ -83,23 +86,60 @@ export class SubjectService {
     }
   }
 
-  async getSubject(getSubjectDto: GetSubjectDto) {
+  async getSubject(getSubjectDto: GetSubjectDto, req: any) {
     try {
-      const subject = await Subject.findByPk(getSubjectDto.subject_id, {
-        include: [{
-          model: Level,
-          as: "level"
-        }]
-      });
 
-      if (!subject) {
-        throw new HttpException(
-          {
-            errorCode: 2001,
-            message: "Subject Not Found",
-          },
-          HttpStatus.NOT_FOUND,
-        );
+      let subject;
+
+      switch (req.user.role) {
+
+        case Role.TEACHER:
+          subject = await Subject.findByPk(getSubjectDto.subject_id, {
+            include: [
+              {
+                required: true,
+                model: TeacherProfile,
+                where: {
+                  id: {
+                    [Op.eq]: req.user.sub
+                  }
+                }
+              },
+              {
+                required: false,
+                model: Bot
+              },
+              {
+                model: Level,
+                as: "level"
+              }]
+          });
+          if (!subject) {
+            throw new Error("No Subject Found")
+          }
+
+          break
+
+        case Role.SUPER_ADMIN:
+          subject = await Subject.findByPk(getSubjectDto.subject_id, {
+            include: [
+
+              {
+                required: false,
+                model: Bot
+              },
+              {
+                model: Level,
+                as: "level"
+              }]
+          });
+
+          if (!subject) {
+            throw new Error("No Subject Found")
+          }
+          break
+        default:
+          throw new Error("Invalid Role")
       }
 
       return {
@@ -120,7 +160,7 @@ export class SubjectService {
         // Pagination logic
         const offset = (page - 1) * limit;
         const result = await Subject.findAndCountAll({
-         
+
           include: [{
             model: Level,
             as: "level"
@@ -133,7 +173,7 @@ export class SubjectService {
       } else {
         // Return all subjects if page and limit are not provided
         subjects = await Subject.findAll({
-          
+
           include: [{
             model: Level,
             as: "level"
@@ -164,7 +204,7 @@ export class SubjectService {
       const subject = await Subject.findOne({
         where: {
           id: updateSubjectDto.id,
-        
+
         },
       });
 
@@ -184,7 +224,7 @@ export class SubjectService {
           where: {
             title: updateSubjectDto.title,
             level_id: updateSubjectDto.level_id,
-         
+
             id: { [Op.ne]: updateSubjectDto.id }, // Exclude the current subject
           },
         });
@@ -210,7 +250,7 @@ export class SubjectService {
         {
           where: {
             id: updateSubjectDto.id,
-          
+
           },
         },
       );
@@ -232,7 +272,7 @@ export class SubjectService {
         where: {
           title: createSubjectDto.title,
           level_id: createSubjectDto.level_id,
-         
+
         },
       });
 
@@ -251,7 +291,7 @@ export class SubjectService {
         display_title: createSubjectDto.display_title,
         description: createSubjectDto.description,
         level_id: createSubjectDto.level_id,
-       
+
       });
 
       return {

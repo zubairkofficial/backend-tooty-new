@@ -116,46 +116,11 @@ export class StatsService {
         }]
       })
 
-      const subjects = await TeacherProfile.count({
-        include: [{
-          model: School,
-          where: {
-            created_by_id: {
-              [Op.eq]: req.user.sub
-            }
-          }
-        },
-        {
-          model: Subject,
-          attributes: ['id'],  // Only count unique subject IDs
-        }],
-        distinct: true
-      })
-      // const quizzes = await this.quizModel.count();
-      const levels = await StudentProfile.count({
-        include: [{
-          model: School,
-          where: {
-            created_by_id: {
-              [Op.eq]: req.user.sub
-            }
-          }
-        },
-        {
-          model: Level,
-          attributes: ['id'],  // Only count unique subject IDs
-        }],
-        distinct: true
-      })
       return {
         principals,
         schools,
         teachers,
-        subjects,
-        bots: subjects,
         students,
-        levels
-
       };
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -206,13 +171,33 @@ export class StatsService {
         ...student_levels.map(s => s.level_id)
       ]);
 
-      console.log(uniqueLevels)
-      const subjects = await Subject.count({
+
+      const students_subjects = await Subject.count({
+
+        include: [
+          {
+            model: Level,
+            include: [
+              {
+                model: StudentProfile,
+                where: {
+                  school_id: {
+                    [Op.eq]: schoolId
+                  }
+                },
+              }
+            ]
+
+          },
+        ],
+        distinct: true
+      })
+
+      const teachers_subjects = await Subject.count({
 
         include: [
           {
             model: TeacherProfile,
-            attributes: ['id', "school_id"],  // Only count unique subject IDs
             where: {
               school_id: {
                 [Op.eq]: schoolId
@@ -225,14 +210,17 @@ export class StatsService {
       const bots = await Subject.count({
         include: [
           {
-            required: true,
-            model: TeacherProfile,
-            attributes: ['id', "school_id"],  // Only count unique subject IDs
-            where: {
-              school_id: {
-                [Op.eq]: schoolId
+            model: Level,
+            include: [
+              {
+                model: StudentProfile,
+                where: {
+                  school_id: {
+                    [Op.eq]: schoolId
+                  }
+                },
               }
-            },
+            ]
 
           },
           {
@@ -264,7 +252,8 @@ export class StatsService {
         students,
         bots,
         levels: uniqueLevels.size,
-        subjects,
+        students_subjects,
+        teachers_subjects,
         quizzes,
       };
     } catch (error) {
@@ -276,7 +265,16 @@ export class StatsService {
     try {
 
 
-      const students = await this.studentProfileModel.count({ where: { level_id: { [Op.eq]: req.user.level_id } } });
+      const students = await this.studentProfileModel.count({
+        where: {
+          level_id: {
+            [Op.eq]: req.user.level_id
+          },
+          school_id: {
+            [Op.eq]: req.user.school_id
+          }
+        }
+      });
 
       const quizzes = await this.quizModel.count({
         where: {
@@ -320,7 +318,12 @@ export class StatsService {
       const totalQuizzes = await this.quizModel.count({
         include: [
           {
-            model: Subject
+            model: TeacherProfile,
+            where: {
+              school_id: {
+                [Op.eq]: req.user.school_id
+              }
+            }
           },
         ],
         where: {
@@ -328,6 +331,7 @@ export class StatsService {
             [Op.eq]: req.user.level_id
           }
         },
+        distinct: true
       });
 
       // Quizzes attempted by the student

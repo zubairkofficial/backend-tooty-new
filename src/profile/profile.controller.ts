@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';  // Swagger decorators
 import { UpdateStudentProfileDto, UpdateTeacherProfileDto } from './dto/update-profile.dto';
 import { ProfileService } from './profile.service';
@@ -130,7 +130,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Super Admin Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
-  async getStudentById(@Req() req: any, @Param() params) {
+  async getStudentById(@Req() req: any, @Param() params: any, @Query() queryParams: any) {
     return this.profileServices.getStudentById(params, req);
   }
 
