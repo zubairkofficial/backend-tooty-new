@@ -550,9 +550,13 @@ export class UserService {
 
       // Commit Transaction if everything is successful
       await transaction.commit();
+      try {
+        // Send email after successful commit
+        await this.sendAccountCreationEmail(user, createUserDto.password);
 
-      // Send email after successful commit
-      await this.sendAccountCreationEmail(user, createUserDto.password);
+      } catch (error) {
+        throw new Error("Failed to send email to user - user created succesfully")
+      }
 
       return {
         message: 'User successfully registered.',

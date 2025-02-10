@@ -133,37 +133,6 @@ export class UserController {
     return this.userService.createUser(createUserDto, req);
   }
 
-  // @Post('create-super-intendent') //create super intendent by super admin
-  // @Roles(Role.SUPER_ADMIN)
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @ApiBearerAuth('access-token')// JWT Bearer authentication
-  // @ApiOperation({ summary: 'Create a admin by super admin' })
-  // @ApiResponse({ status: 201, description: 'Admin created successfully' })
-  // async createSuperIntendent(@Body() createSuperIntendentDto: CreateSuperIntendentDto) {
-  //   return this.userService.createSuperIntendent(createSuperIntendentDto);
-  // }
-
-  // // it belongs to super intentdent to create admin
-  // @Post('create-admin') //create principle by super intendent
-  // @Roles(Role.SUPER_INTENDENT)
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @ApiBearerAuth('access-token')// JWT Bearer authentication
-  // @ApiOperation({ summary: 'Create a admin by super_intendent' })
-  // @ApiResponse({ status: 201, description: 'Admin created successfully' })
-  // async createAdmin(@Body() createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
-  //   return this.userService.createAdmin(createAdminBySuperAdminDto);
-  // }
-
-  // ///this belongs to the admin of school to create user, teacher etc..
-  // @Post('create-user') //create user,teacher,parent by principle
-  // @Roles(Role.ADMIN)
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @ApiBearerAuth('access-token')// JWT Bearer authentication
-  // @ApiOperation({ summary: 'Create a user by admin' })
-  // @ApiResponse({ status: 201, description: 'User created successfully' })
-  // async createUser(@Body() createUserByAdminDto: CreateUserByAdminDto, @Req() req: any) {
-  //   return this.userService.createUser(createUserByAdminDto, req);
-  // }
 
 
   @Delete('delete-user')
@@ -228,7 +197,7 @@ export class UserController {
   }
 
   @Put('update-profile')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER, Role.SUPER_ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER, Role.SUPER_ADMIN,Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Update user details' })
