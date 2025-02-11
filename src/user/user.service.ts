@@ -126,43 +126,52 @@ export class UserService {
   }
 
   async verifyOtp(verifyOtp: VerifyOtpDto) {
-    const otpRecord = await Otp.findOne({
-      where: {
-        otp: verifyOtp.otp,
-        email: verifyOtp.email,
-      },
-    });
+    try {
+      const otpRecord = await Otp.findOne({
+        where: {
+          otp: verifyOtp.otp,
+          email: verifyOtp.email,
+        },
+      });
 
-    if (!otpRecord) {
-      throw new Error('Invalid and Expired OTP');
+      if (!otpRecord) {
+        throw new Error('Invalid and Expired OTP');
+      }
+      const user = await User.findOne({
+        where: {
+          email: verifyOtp.email,
+        },
+      });
+
+      if (!user) {
+        throw new Error('Unable to Verify User');
+      }
+
+      const otpExpiry = new Date(otpRecord.createdAt);
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
+      if (new Date() > otpExpiry) {
+        otpRecord.destroy();
+        throw new Error('Invalid or Expired OTP ');
+      }
+
+      otpRecord.isVerified = true;
+      await otpRecord.save();
+
+      return {
+        message: 'OTP verified successfully',
+        statusCode: HttpStatus.OK,
+        data: {
+          success: true,
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
     }
-    const user = await User.findOne({
-      where: {
-        email: verifyOtp.email,
-      },
-    });
 
-    if (!user) {
-      throw new Error('Unable to Verify User');
-    }
-
-    const otpExpiry = new Date(otpRecord.createdAt);
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
-    if (new Date() > otpExpiry) {
-      otpRecord.destroy();
-      throw new Error('Invalid or Expired OTP ');
-    }
-
-    otpRecord.isVerified = true;
-    await otpRecord.save();
-
-    return {
-      message: 'OTP verified successfully',
-      statusCode: HttpStatus.OK,
-      data: {
-        success: true,
-      },
-    };
   }
 
 
@@ -589,249 +598,6 @@ export class UserService {
     });
   }
 
-
-  // async createSuperIntendent(createSuperIntendentDto: CreateSuperIntendentDto) {
-  //   try {
-  //     const existingUser = await User.findOne({
-  //       where: { email: createSuperIntendentDto.email },
-  //     });
-  //     if (existingUser) {
-  //       return {
-  //         message: 'Super Intendent Already Exist',
-  //         statusCode: 1000,
-  //         user: {
-  //           isVerified: existingUser.isVerified,
-  //         },
-  //       };
-  //     }
-  //     const hashedPassword = await bcrypt.hash(createSuperIntendentDto.password, 10);
-
-  //     const res = await User.create({
-  //       name: createSuperIntendentDto.name,
-  //       email: createSuperIntendentDto.email,
-  //       password: hashedPassword,
-  //       contact: createSuperIntendentDto.contact,
-  //       role: Role.SUPER_INTENDENT,
-  //       isVerified: true
-  //     }).then(async (u) => {
-
-  //       await SuperIntendentProfile.create({
-  //         id: u.id,
-  //         user_id: u.id,
-  //         district_id: createSuperIntendentDto.district_id
-  //       })
-
-  //       return u
-  //     });
-  //     return {
-  //       message: 'Admin successfully registered.',
-  //       statusCode: HttpStatus.OK,
-  //       data: {
-  //         id: res.id,
-  //         name: res.name,
-  //         email: res.email,
-  //       },
-  //     };
-  //   } catch (error) {
-  //     console.error(error);
-  //     throw new HttpException(
-  //       error.message || 'Failed to create super intendent',
-  //       error.statusCode || 500
-  //     );
-  //   }
-
-  // }
-
-  // async createAdmin(createAdminBySuperAdminDto: CreateAdminBySuperAdminDto) {
-
-  //   try {
-  //     const existingUser = await User.findOne({
-  //       where: { email: createAdminBySuperAdminDto.email },
-  //     });
-  //     if (existingUser) {
-  //       return {
-  //         message: 'Admin Already Exist',
-  //         statusCode: 1000,
-  //         user: {
-  //           isVerified: existingUser.isVerified,
-  //         },
-  //       };
-  //     }
-  //     const hashedPassword = await bcrypt.hash(createAdminBySuperAdminDto.password, 10);
-
-  //     const res = await User.create({
-  //       name: createAdminBySuperAdminDto.name,
-  //       email: createAdminBySuperAdminDto.email,
-  //       password: hashedPassword,
-  //       contact: createAdminBySuperAdminDto.contact,
-  //       role: createAdminBySuperAdminDto.role,
-  //       isVerified: true
-  //     }).then(async (u) => {
-
-  //       await AdminProfile.create({
-  //         id: u.id,
-  //         user_id: u.id,
-  //         school_id: createAdminBySuperAdminDto.school_id
-  //       })
-
-  //       return u
-  //     });
-  //     return {
-  //       message: 'Admin successfully registered.',
-  //       statusCode: HttpStatus.OK,
-  //       data: {
-  //         id: res.id,
-  //         name: res.name,
-  //         email: res.email,
-  //       },
-  //     };
-  //   } catch (error) {
-  //     console.error(error);
-  //     throw new HttpException(
-  //       error.message || 'Failed to create admin',
-  //       error.statusCode || 500
-  //     );
-  //   }
-  // }
-
-  // async createUser(createUserByAdminDto: CreateUserByAdminDto, req: any) {
-
-  //   try {
-  //     let user: User;
-  //     try {
-  //       // Check if the user already exists
-  //       const existingUser = await User.findOne({
-  //         where: { email: createUserByAdminDto.email },
-  //         paranoid: false
-  //       });
-
-  //       if (existingUser) {
-  //         throw new Error("User with email already exist")
-  //       }
-
-  //       // Validate role-specific fields before creating anything
-  //       if (createUserByAdminDto.role === Role.USER) {
-  //         if (!createUserByAdminDto.level_id || !createUserByAdminDto.parent_id) {
-  //           throw new Error('Failed to create Student: level and parent are required');
-  //         }
-  //       }
-
-  //       if (createUserByAdminDto.role === Role.TEACHER) {
-  //         if (!createUserByAdminDto.level_id) {
-  //           throw new Error('Failed to create Teacher: level/grade is required');
-  //         }
-  //       }
-
-  //       // Hash the password
-  //       const hashedPassword = await bcrypt.hash(createUserByAdminDto.password, 10);
-
-  //       // Create the user
-  //       user = await User.create({
-  //         name: createUserByAdminDto.name,
-  //         email: createUserByAdminDto.email,
-  //         password: hashedPassword,
-  //         contact: createUserByAdminDto.contact,
-  //         role: createUserByAdminDto.role,
-  //         isVerified: true,
-  //       });
-
-  //       // Create role-specific profiles
-  //       if (createUserByAdminDto.role === Role.USER) {
-  //         await StudentProfile.create({
-  //           level_id: createUserByAdminDto.level_id,
-  //           user_id: user.id,
-  //           user_roll_no: createUserByAdminDto.user_roll_no,
-  //           id: user.id,
-  //           school_id: req.user.school_id,
-  //           parent_id: createUserByAdminDto.parent_id,
-  //         });
-  //       } else if (createUserByAdminDto.role === Role.TEACHER) {
-  //         const teacher = await TeacherProfile.create({
-  //           user_id: user.id,
-  //           id: user.id,
-  //           title: '',
-  //           level_id: createUserByAdminDto.level_id,
-  //           school_id: req.user.school_id,
-  //         });
-
-  //         // Create join records for teacher subjects
-  //         for (const subjectId of createUserByAdminDto.subjects) {
-  //           await JoinTeacherSubjectLevel.create({
-  //             level_id: createUserByAdminDto.level_id,
-  //             subject_id: subjectId,
-  //             teacher_id: teacher.id,
-  //           });
-  //         }
-  //       } else if (createUserByAdminDto.role === Role.PARENT) {
-  //         await ParentProfile.create({
-  //           user_id: user.id,
-  //           id: user.id,
-  //           school_id: req.user.school_id,
-  //         });
-  //       }
-
-
-  //     } catch (error) {
-
-  //       throw new Error("Error Creating User" + error.message)
-  //     }
-
-  //     const transporter = nodemailer.createTransport({
-  //       host: `${process.env.EMAIL_HOST}`,
-  //       port: Number(`${process.env.EMAIL_PORT}`),
-  //       secure: false,
-  //       auth: {
-  //         user: `${process.env.EMAIL_USERNAME}`,
-  //         pass: `${process.env.EMAIL_PASSWORD}`,
-  //       },
-  //     });
-
-  //     try {
-  //       // Send email
-  //       await transporter.sendMail({
-  //         from: `${process.env.EMAIL_FROM_ADDRESS}`,
-  //         to: user.email, // Use the provided email
-  //         subject: `Tooty for ${user.role}`,
-  //         text: `Congratulations!
-  //             Your Tooty account has been created. Credentials are given below
-
-  //             email: ${user.email}
-  //             password:  ${createUserByAdminDto.password}
-  //       `,
-  //         html: ` <p>Congratulations! Tooty Account has been created Successfully
-  //                 <strong>email: ${user.email}</strong>
-  //                 <strong>password:  ${createUserByAdminDto.password}</strong>
-  //               </p>`,
-  //       });
-
-  //     } catch (error) {
-  //       throw new Error("account creation email send failed")
-  //     }
-
-  //     // Return success response
-  //     return {
-  //       message: 'User successfully registered.',
-  //       statusCode: HttpStatus.OK,
-  //       data: {
-  //         id: user.id,
-  //         name: user.name,
-  //         email: user.email,
-  //       },
-  //     };
-  //   } catch (error) {
-  //     // Handle errors and log them if necessary
-  //     console.error('Error in createUser:', error);
-
-  //     // Return error response
-  //     return {
-  //       message: error.message || 'Internal Server Error',
-  //       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //       error: error.message || 'Internal Server Error',
-  //     };
-  //   }
-  // }
-
-
   async signup(createUserDto: CreateUserDto, res: Response) {
     console.log(createUserDto)
 
@@ -884,45 +650,55 @@ export class UserService {
   }
 
   async verifyUser(verifyOtp: VerifyOtpDto) {
-    const otpRecord = await Otp.findOne({
-      where: {
-        otp: verifyOtp.otp,
-        email: verifyOtp.email,
-      },
-    });
+    try {
+      const otpRecord = await Otp.findOne({
+        where: {
+          otp: verifyOtp.otp,
+          email: verifyOtp.email,
+        },
+      });
 
-    if (!otpRecord) {
-      throw new Error('Invalid and Expired OTP');
+      if (!otpRecord) {
+        throw new Error('Invalid and Expired OTP');
+      }
+      const user = await User.findOne({
+        where: {
+          email: verifyOtp.email,
+        },
+      });
+
+      if (!user) {
+        throw new Error('Unable to Verify User');
+      }
+
+      const otpExpiry = new Date(otpRecord.createdAt);
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
+      if (new Date() > otpExpiry) {
+        otpRecord.destroy();
+        throw new Error('Invalid or Expired OTP ');
+      }
+
+      user.isVerified = true;
+      await user.save();
+
+      await otpRecord.destroy();
+
+      return {
+        message: 'OTP verified successfully',
+        statusCode: HttpStatus.OK,
+        data: {
+          success: true,
+        },
+      };
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
     }
-    const user = await User.findOne({
-      where: {
-        email: verifyOtp.email,
-      },
-    });
 
-    if (!user) {
-      throw new Error('Unable to Verify User');
-    }
-
-    const otpExpiry = new Date(otpRecord.createdAt);
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
-    if (new Date() > otpExpiry) {
-      otpRecord.destroy();
-      throw new Error('Invalid or Expired OTP ');
-    }
-
-    user.isVerified = true;
-    await user.save();
-
-    await otpRecord.destroy();
-
-    return {
-      message: 'OTP verified successfully',
-      statusCode: HttpStatus.OK,
-      data: {
-        success: true,
-      },
-    };
   }
 
   async generateRefreshToken(payload: {
@@ -997,130 +773,140 @@ export class UserService {
   }
 
   async login(userLoginDto: UserLoginDto) {
-    const { email, password } = userLoginDto;
-    this.logger.log(`USER login creadentaila , ${userLoginDto}`);
-    const user = await User.findOne({
-      where: { email }
-    });
+    try {
+      const { email, password } = userLoginDto;
+      this.logger.log(`USER login creadentaila , ${userLoginDto}`);
+      const user = await User.findOne({
+        where: { email }
+      });
 
-    if (!user) {
-      throw new UnauthorizedException('No User exist');
-    }
-
-    let profile: any;
-    if (user.role == Role.USER) {
-      profile = await StudentProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-    } else if (user.role == Role.TEACHER) {
-      profile = await TeacherProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-    } else if (user.role == Role.ADMIN) {
-      profile = await AdminProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-      const school = await JoinSchoolAdmin.findOne({
-        where: {
-          admin_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-      profile.school_id = school?.school_id
-    }
-    else if (user.role == Role.PARENT) {
-      profile = await ParentProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-    } else if (user.role == Role.SUPER_ADMIN) {
-      profile = await SuperAdminProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-    } else if (user.role == Role.SUPER_INTENDENT) {
-      profile = await SuperIntendentProfile.findOne({
-        where: {
-          user_id: {
-            [Op.eq]: user.id
-          }
-        }
-      })
-    }
-
-    // Validate password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    //check if refresh token already exist as user id is unique
-    const refresh_token_exist = await RefreshToken.findOne({
-      where: {
-        user_id: {
-          [Op.eq]: user?.id
-        }
+      if (!user) {
+        throw new UnauthorizedException('No User exist');
       }
-    })
 
-    let refreshToken = ""
-    console.log("profile", profile)
+      let profile: any;
+      if (user.role == Role.USER) {
+        profile = await StudentProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+      } else if (user.role == Role.TEACHER) {
+        profile = await TeacherProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+      } else if (user.role == Role.ADMIN) {
+        profile = await AdminProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+        const school = await JoinSchoolAdmin.findOne({
+          where: {
+            admin_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+        profile.school_id = school?.school_id
+      }
+      else if (user.role == Role.PARENT) {
+        profile = await ParentProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+      } else if (user.role == Role.SUPER_ADMIN) {
+        profile = await SuperAdminProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+      } else if (user.role == Role.SUPER_INTENDENT) {
+        profile = await SuperIntendentProfile.findOne({
+          where: {
+            user_id: {
+              [Op.eq]: user.id
+            }
+          }
+        })
+      }
 
-    const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id || null, school_id: profile?.school_id || null, district_id: profile?.district_id || null };
-
-    if (refresh_token_exist) {
-      refreshToken = refresh_token_exist?.refresh_token
-      console.log("using old refresh key")
-    } else {
-      refreshToken = await this.generateRefreshToken(payload);
-      console.log("using new refresh key")
-    }
-
-    if (refreshToken === '') {
-      throw new Error('Fialed to LogIn');
-    }
-    const accessToken = SignAccessToken(payload);
-
-    this.logger.log(
-      `jwt access token ${accessToken} \n jwt refresh token ${refreshToken}`,
-    );
-
-    delete user.password;
-    return {
-      message: 'Login successful.',
-      statusCode: 200,
-      data: {
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          contact: user.contact,
-          user_image_url: user.user_image_url,
-          role: user.role
-
+      // Validate password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      //check if refresh token already exist as user id is unique
+      const refresh_token_exist = await RefreshToken.findOne({
+        where: {
+          user_id: {
+            [Op.eq]: user?.id
+          }
         }
-      },
-    };
+      })
+
+      let refreshToken = ""
+      console.log("profile", profile)
+
+      const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id || null, school_id: profile?.school_id || null, district_id: profile?.district_id || null };
+
+      if (refresh_token_exist) {
+        refreshToken = refresh_token_exist?.refresh_token
+        console.log("using old refresh key")
+      } else {
+        refreshToken = await this.generateRefreshToken(payload);
+        console.log("using new refresh key")
+      }
+
+      if (refreshToken === '') {
+        throw new Error('Fialed to LogIn');
+      }
+      const accessToken = SignAccessToken(payload);
+
+      this.logger.log(
+        `jwt access token ${accessToken} \n jwt refresh token ${refreshToken}`,
+      );
+
+      delete user.password;
+      return {
+        message: 'Login successful.',
+        statusCode: 200,
+        data: {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            contact: user.contact,
+            user_image_url: user.user_image_url,
+            role: user.role
+
+          }
+        },
+      };
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+
   }
 
 

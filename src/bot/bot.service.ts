@@ -276,7 +276,7 @@ export class BotService {
 
                 const system_prompt = ` 
                         **Master Prompt**
-                        ${api?.master_prompt}
+                        ${api?.master_prompt}\n
                         **Bot Specific Prompt:**
                         ${bot?.description}\n
 

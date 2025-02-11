@@ -64,7 +64,7 @@ export class ContextDataService {
                 // Pagination logic
                 const offset = (page - 1) * limit;
                 const result = await File.findAndCountAll({
-                   
+
                     include: [{
                         model: Subject,
                         attributes: ["title"],
@@ -82,7 +82,7 @@ export class ContextDataService {
             } else {
                 // Return all files if page and limit are not provided
                 files = await File.findAll({
-                   
+
                     include: [{
                         model: Subject,
                         attributes: ["title"],
@@ -127,7 +127,18 @@ export class ContextDataService {
         });
         const client = await pool.connect();
         try {
+            const file_attached = await Join_BotContextData.findOne({
+                where: {
+                    file_id: {
+                        [Op.eq]: deleteFileDto.id
+                    }
+                }
+            })
 
+            if (file_attached) {
+                throw new Error("Delete Failed: File is in Use")
+            }
+            
             const res = await File.destroy({
                 where: {
                     id: {
@@ -322,7 +333,7 @@ export class ContextDataService {
                     slug: createFileDto.slug + "-" + new Date(),
                     user_id: req.user.sub,
                     subject_id: Number(createFileDto.subject_id),
-                   
+
                 });
             } catch (error) {
                 console.error('Error creating file record:', error);
@@ -336,7 +347,7 @@ export class ContextDataService {
                 ...doc,
                 metadata: {
                     file_id: context_file?.id,
-                  
+
                 },
             }));
 
