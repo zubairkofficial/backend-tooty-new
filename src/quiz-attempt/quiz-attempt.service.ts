@@ -181,8 +181,12 @@ export class QuizAttemptService {
             required: true,
             model: Answer,
             as: 'answers',
-
             include: [
+              {
+                required: false,
+                model: Option,
+                as: "selected_option"
+              },
               {
 
                 model: Question,

@@ -37,12 +37,12 @@ export class FetchChatHistoryDto {
   @IsNotEmpty()
   bot_id: number;
 
-  @IsNumber()
-  @IsNotEmpty()
-  page: number
+  // @IsNumber()
+  // @IsNotEmpty()
+  // page: number
 
   
-  @IsNumber()
-  @IsNotEmpty()
-  limit: number
+  // @IsNumber()
+  // @IsNotEmpty()
+  // limit: number
 }
