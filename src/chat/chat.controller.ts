@@ -11,7 +11,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
 @ApiTags('Chat') // Grouping API under the "Chat" tag in Swagger UI
 @Controller('chat')
 export class ChatController {
-    constructor(private readonly chatSerivce: ChatService) {}
+    constructor(private readonly chatSerivce: ChatService) { }
 
     @Post('/fetch-chat-history')
     @ApiOperation({ summary: 'Fetch chat history for a given bot and user' })
@@ -31,7 +31,7 @@ export class ChatController {
         status: 500,
         description: 'Internal server error',
     })
-    @Roles(Role.TEACHER, Role.ADMIN)
+    @Roles(Role.TEACHER, Role.ADMIN, Role.PARENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     fetchChatHistory(@Body() fetchChatHistoryDto: FetchChatHistoryDto, @Req() req: any) {
         return this.chatSerivce.fetchChatHistory(fetchChatHistoryDto, req);
@@ -55,7 +55,7 @@ export class ChatController {
         status: 500,
         description: 'Internal server error',
     })
-    @Roles(Role.USER, Role.ADMIN,Role.SUPER_ADMIN,Role.TEACHER)
+    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT, Role.PARENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     fetchChat(@Body() fetchChatDto: FetchChatDto, @Req() req: any) {
         return this.chatSerivce.fetchChat(fetchChatDto, req);
@@ -79,7 +79,7 @@ export class ChatController {
         description: 'The message and chat session details',
         type: CreateChatDto,
     })
-    @Roles(Role.USER, Role.ADMIN,Role.TEACHER,Role.SUPER_ADMIN)
+    @Roles(Role.USER, Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.SUPER_INTENDENT, Role.PARENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     sendMessage(@Body() createChatDto: CreateChatDto, @Req() req: any) {
         return this.chatSerivce.sendMessage(createChatDto, req);

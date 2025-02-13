@@ -19,7 +19,7 @@ export class BotController {
     constructor(private readonly botService: BotService) { }
 
     @Post('generate-image')
-    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT)
+    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT, Role.PARENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Generate image for bot' })
     @ApiResponse({ status: 200, description: 'Image generated successfully' })
@@ -28,7 +28,7 @@ export class BotController {
     }
 
     @Post('query-bot')
-    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT)
+    @Roles(Role.USER, Role.ADMIN, Role.SUPER_ADMIN, Role.TEACHER, Role.SUPER_INTENDENT, Role.PARENT)
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'Query bot based on specific parameters' })
     @ApiResponse({ status: 200, description: 'Bot queried successfully' })
