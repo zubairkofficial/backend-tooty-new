@@ -9,6 +9,15 @@ export class FetchChatDto {
   @IsNumber()
   @IsNotEmpty()
   bot_id: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  page: number
+
+  
+  @IsNumber()
+  @IsNotEmpty()
+  limit: number
 }
 
 export class FetchChatHistoryDto {
@@ -27,4 +36,13 @@ export class FetchChatHistoryDto {
   @IsNumber()
   @IsNotEmpty()
   bot_id: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  page: number
+
+  
+  @IsNumber()
+  @IsNotEmpty()
+  limit: number
 }

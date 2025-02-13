@@ -45,7 +45,7 @@ export class ContextDataController {
           type: 'string',
         },
         
-      },
+      },  
     },
   })
   async uploadFile(

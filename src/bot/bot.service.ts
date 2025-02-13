@@ -555,6 +555,7 @@ export class BotService {
                 user_id: req.user.sub,
                 subject_id: updateBotDto.subject_id,
                 display_name: updateBotDto.display_name,
+                first_message: updateBotDto.first_message,
                 voice_model: updateBotDto.voice_model
             }, {
                 where: {
@@ -609,7 +610,8 @@ export class BotService {
                 bot_image_url: `${image.filename}`,
                 voice_model: createBotDto.voice_model,
                 subject_id: Number(createBotDto.subject_id),
-                display_name: createBotDto.display_name
+                display_name: createBotDto.display_name,
+                first_message: createBotDto.first_message
             }, { transaction });
 
             await Join_BotContextData.create({

@@ -28,6 +28,14 @@ export class CreateBotDto {
     description: string;
 
     @ApiProperty({
+        description: 'A first_message of the bot',
+        example: 'This bot helps with customer service inquiries.',
+    })
+    @IsString({ message: 'first_message should be string' })
+    @IsNotEmpty({ message: 'first_message should not be empty' })
+    first_message: string;
+
+    @ApiProperty({
         description: 'The voice model used by the bot',
         example: 'Google WaveNet',
     })
@@ -100,6 +108,14 @@ export class UpdateBotDto {
     @IsString({ message: 'description should be string' })
     @IsNotEmpty({ message: 'description should not be empty' })
     description: string;
+
+    @ApiProperty({
+        description: 'A first_message of the bot',
+        example: 'This bot helps with customer service inquiries.',
+    })
+    @IsString({ message: 'first_message should be string' })
+    @IsNotEmpty({ message: 'first_message should not be empty' })
+    first_message: string;
 
     @ApiProperty({
         description: 'The voice model used by the bot',

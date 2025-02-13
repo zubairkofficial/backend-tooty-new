@@ -44,21 +44,27 @@ export class CreateQuizDto {
   @IsNotEmpty()
   title: string;
 
+  @IsString()
   @IsNotEmpty()
   description: string;
 
+  @IsNotEmpty()
   @IsEnum(QuizType)
   quiz_type: string;
 
+  @IsNotEmpty()
   @IsDateString()
   start_time: Date;
 
+  @IsNotEmpty()
   @IsDateString()
   end_time: Date;
 
+  @IsNotEmpty()
   @IsInt()
   duration: number; // Duration in minutes
 
+  @IsNotEmpty()
   @IsNumber()
   subject_id: number;
 

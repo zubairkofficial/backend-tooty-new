@@ -44,6 +44,11 @@ export class Bot extends Model {
     description: string;
 
     @Column({
+        type: DataType.TEXT,
+    })
+    first_message: string;
+
+    @Column({
         type: DataType.STRING
     })
     bot_image_url: string
