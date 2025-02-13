@@ -68,7 +68,7 @@ export class ChatService {
                 offset: offset, // Pagination offset
             });
 
-            if (data.length < limit && data.length > 0) {
+            if (data.length < limit) {
                 chats = [newMessage, ...data.reverse()]
             } else {
                 chats = data.reverse()
