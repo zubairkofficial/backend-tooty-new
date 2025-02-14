@@ -8,7 +8,7 @@ import { QuizType } from 'src/utils/quizType.enum';
 export class EditQuizDto {
   @IsNumber()
   id: number
-  
+
   @IsOptional()
   @IsNotEmpty()
   title?: string;
@@ -18,10 +18,10 @@ export class EditQuizDto {
   description?: string;
 
   @IsOptional()
-  start_time?: Date;
+  start_time?: Date | null;
 
   @IsOptional()
-  end_time?: Date;
+  end_time?: Date | null;
 
   @IsOptional()
   @IsNumber()
@@ -51,10 +51,10 @@ export class CreateQuizDto {
   quiz_type: string;
 
   @IsOptional()
-  start_time: Date;
+  start_time: Date | null;
 
   @IsOptional()
-  end_time: Date;
+  end_time: Date | null;
 
   @IsNotEmpty()
   @IsInt()
@@ -64,7 +64,7 @@ export class CreateQuizDto {
   @IsNumber()
   subject_id: number;
 
-  
+
   @IsNotEmpty()
   questions: QuestionDto[];
 }
