@@ -18,11 +18,9 @@ export class EditQuizDto {
   description?: string;
 
   @IsOptional()
-  @IsDateString()
   start_time?: Date;
 
   @IsOptional()
-  @IsDateString()
   end_time?: Date;
 
   @IsOptional()
@@ -52,12 +50,10 @@ export class CreateQuizDto {
   @IsEnum(QuizType)
   quiz_type: string;
 
-  @IsNotEmpty()
-  @IsDateString()
+  @IsOptional()
   start_time: Date;
 
-  @IsNotEmpty()
-  @IsDateString()
+  @IsOptional()
   end_time: Date;
 
   @IsNotEmpty()

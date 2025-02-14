@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
 import { Answer } from 'src/answer/entities/answer.entity';
@@ -223,6 +223,34 @@ export class QuizAttemptService {
     const { quiz_id } = createSubmitQuizAttempt;
 
     try {
+
+      const quiz = await this.quizModel.findByPk(quiz_id);
+
+      if (!quiz) {
+        throw new HttpException(`Quiz with ID ${quiz_id} not found`, HttpStatus.NOT_FOUND);
+      }
+
+      if (quiz?.start_time !== null && quiz?.end_time !== null) {
+        console.log("i am coming here")
+        // Parse the incoming dates as UTC
+        const quizStartTime = new Date(`${quiz?.start_time}T00:00:00Z`);
+        const quizEndTime = new Date(`${quiz?.end_time}T00:00:00Z`);
+
+        // Get the current UTC date (without time)
+        const now = new Date();
+        const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+        // Check if the quiz start time is in the past (compared to UTC date only)
+        if (quizStartTime < currentUTCDate) {
+          throw new BadRequestException("quiz has not started yet");
+        }
+
+        // Check if start_time is greater than or equal to end_time
+        if (currentUTCDate >= quizEndTime) {
+          throw new BadRequestException('The Quiz has ended');
+        }
+      }
+
       let quiz_attempt = await this.quizAttemptModel.findOne({
         where: {
           quiz_id: {
@@ -281,6 +309,26 @@ export class QuizAttemptService {
 
       if (!quiz) {
         throw new HttpException(`Quiz with ID ${quiz_id} not found`, HttpStatus.NOT_FOUND);
+      }
+
+      if (quiz?.start_time !== null && quiz?.end_time !== null) {
+        // Parse the incoming dates as UTC
+        const quizStartTime = new Date(`${quiz?.start_time}T00:00:00Z`);
+        const quizEndTime = new Date(`${quiz?.end_time}T00:00:00Z`);
+
+        // Get the current UTC date (without time)
+        const now = new Date();
+        const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+        // Check if the quiz start time is in the past (compared to UTC date only)
+        if (quizStartTime < currentUTCDate) {
+          throw new BadRequestException("quiz has not started yet");
+        }
+
+        // Check if start_time is greater than or equal to end_time
+        if (currentUTCDate >= quizEndTime) {
+          throw new BadRequestException('The Quiz has ended');
+        }
       }
 
       let quizAttempt = await this.quizAttemptModel.findOne({

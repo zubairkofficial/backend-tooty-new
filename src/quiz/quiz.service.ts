@@ -33,24 +33,31 @@ export class QuizService {
   async create(createQuizDto: CreateQuizDto, req: any) {
     try {
       const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
-      console.log("quiz", createQuizDto);
 
-      // Parse the incoming dates as UTC
-      const quizStartTime = new Date(`${start_time}T00:00:00Z`);
-      const quizEndTime = new Date(`${end_time}T00:00:00Z`);
-
-      // Get the current UTC date (without time)
-      const now = new Date();
-      const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-      // Check if the quiz start time is in the past (compared to UTC date only)
-      if (quizStartTime < currentUTCDate) {
-        throw new Error("start_time must be greater than or equal to the current UTC date");
+      if (start_time === null && end_time !== null) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined")
       }
+      if (start_time !== null && end_time === null) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined")
+      }
+      if (start_time !== null && end_time !== null) {
+        // Parse the incoming dates as UTC
+        const quizStartTime = new Date(`${start_time}T00:00:00Z`);
+        const quizEndTime = new Date(`${end_time}T00:00:00Z`);
 
-      // Check if start_time is greater than or equal to end_time
-      if (quizStartTime >= quizEndTime) {
-        throw new BadRequestException('Start time must be before end time');
+        // Get the current UTC date (without time)
+        const now = new Date();
+        const currentUTCDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+        // Check if the quiz start time is in the past (compared to UTC date only)
+        if (quizStartTime < currentUTCDate) {
+          throw new Error("start_time must be greater than or equal to the current UTC date");
+        }
+
+        // Check if start_time is greater than or equal to end_time
+        if (quizStartTime >= quizEndTime) {
+          throw new BadRequestException('Start time must be before end time');
+        }
       }
 
       // Check if level and subject exist
@@ -121,47 +128,58 @@ export class QuizService {
 
   async editQuiz(editQuizDto: EditQuizDto, req: any) {
     const transaction = await this.sequelize.transaction();
-
+    const { title, description, start_time, end_time, duration, subject_id, questions } = editQuizDto;
     try {
+      if (start_time === null && end_time !== null) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined")
+      }
+      if (start_time !== null && end_time === null) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined")
+      }
+
       let totalScore = 0;
       const quiz = await this.quizModel.findByPk(editQuizDto.id, { transaction });
       if (!quiz) {
         throw new NotFoundException(`Quiz with ID ${editQuizDto.id} not found`);
       }
 
-      // Get the current UTC date (without time)
-      const currentDate = new Date();
-      const currentUTCDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
+      if (start_time && end_time) {
 
-      // Check if the quiz has already started
-      if (currentUTCDate >= new Date(quiz.start_time)) {
-        throw new BadRequestException('Quiz cannot be edited after it has started');
-      }
+        // Get the current UTC date (without time)
+        const currentDate = new Date();
+        const currentUTCDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
 
-      const { title, description, start_time, end_time, duration, subject_id, questions } = editQuizDto;
+        if (quiz.start_time !== null) {
+          // Check if the quiz has already started
+        if (currentUTCDate >= new Date(quiz.start_time)) {
+          throw new BadRequestException('Quiz cannot be edited after it has started');
+        } 
+        }
+       
 
-      // Parse the incoming dates as UTC
-      if (start_time) {
-        const quizStartTime = new Date(`${start_time}T00:00:00Z`);
+        // Parse the incoming dates as UTC
+        if (start_time) {
+          const quizStartTime = new Date(`${start_time}T00:00:00Z`);
 
-        // Check if the new start_time is in the past
-        if (quizStartTime < currentUTCDate) {
-          throw new BadRequestException('start_time must be greater than or equal to the current UTC date');
+          // Check if the new start_time is in the past
+          if (quizStartTime < currentUTCDate) {
+            throw new BadRequestException('start_time must be greater than or equal to the current UTC date');
+          }
+
+
+          quiz.start_time = start_time;
         }
 
+        if (end_time) {
+          const quizEndTime = new Date(`${end_time}T00:00:00Z`);
 
-        quiz.start_time = start_time;
-      }
+          // Check if the new end_time is less than the new start_time
+          if (quizEndTime <= new Date(quiz.start_time)) {
+            throw new BadRequestException('End time must be after start time');
+          }
 
-      if (end_time) {
-        const quizEndTime = new Date(`${end_time}T00:00:00Z`);
-
-        // Check if the new end_time is less than the new start_time
-        if (quizEndTime <= new Date(quiz.start_time)) {
-          throw new BadRequestException('End time must be after start time');
+          quiz.end_time = end_time;
         }
-
-        quiz.end_time = end_time;
       }
 
       // Update quiz fields if provided

@@ -25,10 +25,12 @@ export class Quiz extends Model<Quiz> {
   @Column({ type: DataType.ENUM(QuizType.MCQS, QuizType.QA), allowNull: false })
   quiz_type: string;
 
-  @Column({ type: DataType.DATEONLY, allowNull: false })
+  @Default(null)
+  @Column({ type: DataType.DATEONLY, allowNull: true })
   start_time: Date;
 
-  @Column({ type: DataType.DATEONLY, allowNull: false })
+  @Default(null)
+  @Column({ type: DataType.DATEONLY, allowNull: true })
   end_time: Date;
 
   @Column({ type: DataType.INTEGER, allowNull: false })
