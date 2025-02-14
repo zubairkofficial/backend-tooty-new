@@ -34,11 +34,8 @@ export class QuizService {
     try {
       const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
 
-      if (start_time === null && end_time !== null) {
-        throw new Error("Both start_time & end_time can be null, or both must be defined")
-      }
-      if (start_time !== null && end_time === null) {
-        throw new Error("Both start_time & end_time can be null, or both must be defined")
+      if ((start_time === null) !== (end_time === null)) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined");
       }
       if (start_time !== null && end_time !== null) {
         // Parse the incoming dates as UTC
@@ -130,17 +127,18 @@ export class QuizService {
     const transaction = await this.sequelize.transaction();
     const { title, description, start_time, end_time, duration, subject_id, questions } = editQuizDto;
     try {
-      if (start_time === null && end_time !== null) {
-        throw new Error("Both start_time & end_time can be null, or both must be defined")
-      }
-      if (start_time !== null && end_time === null) {
-        throw new Error("Both start_time & end_time can be null, or both must be defined")
+      if ((start_time === null) !== (end_time === null)) {
+        throw new Error("Both start_time & end_time can be null, or both must be defined");
       }
 
       let totalScore = 0;
       const quiz = await this.quizModel.findByPk(editQuizDto.id, { transaction });
       if (!quiz) {
         throw new NotFoundException(`Quiz with ID ${editQuizDto.id} not found`);
+      }
+      if (start_time === null && end_time === null) {
+        quiz.start_time = start_time;
+        quiz.end_time = end_time
       }
 
       if (start_time && end_time) {
@@ -151,11 +149,11 @@ export class QuizService {
 
         if (quiz.start_time !== null) {
           // Check if the quiz has already started
-        if (currentUTCDate >= new Date(quiz.start_time)) {
-          throw new BadRequestException('Quiz cannot be edited after it has started');
-        } 
+          if (currentUTCDate >= new Date(quiz.start_time)) {
+            throw new BadRequestException('Quiz cannot be edited after it has started');
+          }
         }
-       
+
 
         // Parse the incoming dates as UTC
         if (start_time) {
