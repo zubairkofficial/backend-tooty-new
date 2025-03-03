@@ -14,6 +14,7 @@ import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
 import { School } from 'src/school/entities/school.entity';
 import { User } from 'src/user/entities/user.entity';
 import { ParentProfile } from './parent-profile.entity';
+import { PuzzleAttempt } from 'src/puzzle/entity/puzzle-attempts.entity';
 
 
 @Table({
@@ -70,4 +71,7 @@ export class StudentProfile extends Model {
 
     @HasMany(() => QuizAttempt, { onDelete: 'CASCADE' })
     attempted_quizes!: QuizAttempt[]
+
+    @HasMany(() => PuzzleAttempt, { onDelete: 'CASCADE' })
+    solved_puzzles!: PuzzleAttempt[]
 }

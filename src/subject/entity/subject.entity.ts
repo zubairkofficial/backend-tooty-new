@@ -16,6 +16,7 @@ import { File } from 'src/context_data/entities/file.entity';
 import { Level } from 'src/level/entity/level.entity';
 import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
 import { Quiz } from 'src/quiz/entities/quiz.entity';
 
 
@@ -60,6 +61,10 @@ export class Subject extends Model {
 
     @HasMany(() => Quiz, { onDelete: "CASCADE" })
     quizez!: Quiz[];
+
+    @HasMany(() => Puzzle, { onDelete: "CASCADE" })
+    puzzles!: Puzzle[];
+
 
     @BelongsTo(() => Level, { as: 'level' })
     level!: Level;

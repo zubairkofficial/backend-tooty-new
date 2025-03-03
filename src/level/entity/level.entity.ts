@@ -10,6 +10,7 @@ import {
 import { Bot } from 'src/bot/entities/bot.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 
 
@@ -32,7 +33,7 @@ export class Level extends Model {
     })
     level: string;
 
-   
+
 
     @Column({
         type: DataType.TEXT,
@@ -50,5 +51,8 @@ export class Level extends Model {
 
     @HasMany(() => Bot)
     bots!: Bot[]
+
+    @HasMany(() => Puzzle)
+    puzzles!: Puzzle[]
 
 }

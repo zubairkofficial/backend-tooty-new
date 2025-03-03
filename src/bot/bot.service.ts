@@ -33,26 +33,15 @@ import { Sequelize } from "sequelize-typescript";
 const retrieveSchema = z.object({ query: z.string() });
 
 const outputSchema = z.object({
-    answer: z.string().describe(`The answer to the query,   **Response Formatting**:
-                        - Use HTML tags for better presentation:
-                            - \`<p>\` for paragraphs.
-                            - \`<br>\` for line breaks.
-                            - \`<b>\` or \`<strong>\` for emphasis.
-                            - \`<i>\` for italics when explaining concepts.
-                            - \`<ul>\` and \`<li>\` for lists.
-                            - \`<sup>\` and \`<sub>\` for mathematical notations.
-                            - \`<pre>\` or \`<code>\` for code or mathematical derivations.
-                        - Do not include \`<img>\` tags in the response.
-                        - Break long lines for better readability.  `),
-    shouldGenerateImage: z.boolean().describe("Based on the query and answer: Whether an image should be generated"),
-
+    answer: z.string(),
+    shouldGenerateImage: z.boolean()
 });
 
 @Injectable()
 export class BotService {
     private readonly logger = new Logger('BotService')
-    constructor(
 
+    constructor(
         private readonly sequelize: Sequelize,
     ) { }
 
@@ -168,14 +157,15 @@ export class BotService {
     async queryBot(queryBot: QueryBot, req: any) {
         console.log("Data from message:", queryBot);
         let api_key = "";
-
+        const transaction = await this.sequelize.transaction()
         try {
             // Fetch the bot by ID
             const bot = await Bot.findByPk(queryBot.bot_id, {
                 include: [{
                     model: File,
                     attributes: ["id"]
-                }]
+                }],
+                transaction
             });
             console.log("Bot in bot:", bot);
 
@@ -274,11 +264,26 @@ export class BotService {
 
                 ////////////////
 
-                const system_prompt = ` 
-                        **Master Prompt**
-                        ${api?.master_prompt}\n
-                        **Bot Specific Prompt:**
+                const system_prompt = `
+                **Do not inlclude any part of the prompt in the response**
+                **Response Formatting**
+                **If the data includes any type of mathematical or physics or chemistry or any science related equations, formulas, equation references, equation terms, mathematical terms or mathematical expressions etc..., please provide them in LaTeX format, and wrap them in the following format:**
+                 ## Mathematical, Physics, Chemistry or Any Science Related Expressions
+
+                    **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
+
+                    **For block equations, use the \n\`\`\`math ... \`\`\`\n format as shown below:**
+
+                    \n \`\`\`math
+                    E = mc^2
+                    \`\`\`\n
+                    \`\`\`\n
+                           **Bot Specific Master Prompt:**
                         ${bot?.description}\n
+
+                        **General Prompt**
+                        ${api?.master_prompt}\n
+                      
 
                 `
 
@@ -400,51 +405,49 @@ export class BotService {
 
                 const answer = extractAnswer(response)
 
+                console.log("answer", answer)
 
                 const template = `
-                - You are a model designed to analyze queries and their associated answers, formatting the response in detailed HTML while determining if generating an image is feasible.
-                - Do not change any of the text context of answer: {answer}, you work is just to apply html fomatting. you are not supposed to answer or re-write anything about answer.
+                **Do not inlclude any part of the prompt in the response**
+                - You are a model designed to analyze queries and their associated answers, formatting the response in detailed markdown and latex for equation while determining if generating an image is feasible.
+                - Do not change any of the text context of answer: {answer}, you work is just to apply markdown fomatting. you are not supposed to answer or re-write anything about answer.
                 Query: {query}
                 Answer: {answer}
-                - Follow these formatting rules for the HTML output:
-                    - Use appropriate tags for semantics:
-                        - \`<p>\`: Paragraphs.
-                        - \`<br>\`: Line breaks for better readability in long lines.
-                        - \`<b>\`: Bold important text.
-                        - \`<strong>\`: Highlight crucial information.
-                        - \`<i>\`: Italicize concepts or terms.
-                        - \`<em>\`: Emphasize text with italics.
-                        - \`<mark>\`: Highlight significant text with a background color.
-                        - \`<small>\`: For less prominent text or notes.
-                        - \`<del>\`: Strikethrough for corrections or deleted content.
-                        - \`<ins>\`: Underline newly added or corrected content.
-                        - \`<sub>\` and \`<sup>\`: Subscript and superscript for formulas or notations.
-                        - \`<abbr>\`: Define abbreviations or acronyms.
-                        - \`<address>\`: Provide contact information.
-                        - \`<blockquote>\`: For larger quoted sections.
-                        - \`<cite>\`: Cite works or references.
-                        - \`<q>\`: Inline quotes.
-                        - \`<code>\`: Code or formulas.
-                        - \`<bdo>\`: Specify text direction.
+
+                **If the data includes any type of mathematical or physics or chemistry or any science related equations, formulas, equation references, equation terms, mathematical terms or mathematical expressions etc..., please provide them in LaTeX format, and wrap them in the following format:**
+                 ## Mathematical, Physics, Chemistry or Any Science Related Expressions
+
+                    **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
+
+                    **For block equations, use the \n\`\`\`math ... \`\`\`\n format as shown below:**
+
+                    \n \`\`\`math
+                    E = mc^2
+                    \`\`\`\n
                 
-                    - Enhance readability:
-                        - Use <ul> and <li> for lists.
-                        - Add colors to text where applicable (e.g., <span style="color:red;">error</span> or <span style="color:green;">success</span>).
-                
-                    - Handle long lines:
-                        - Automatically break them with <br> or structure into paragraphs.
-                
-                    - No \`<img>\` tags in the output.
-                
+                Please generate a response in Markdown format. The response should include:
+
+                1. Headings using # for H1, ## for H2, ### for H3, and so on.
+                2. Bold text using ** around the text.
+                3. Italicized text using * around the text.
+                4. Blockquotes using > at the beginning of the line.
+                5. Ordered lists using numbers followed by a period (e.g., 1. First item).
+                6. Unordered lists using - (or * or +) at the beginning of the line.
+                7. Inline code using backticks (\`\` \`code\` \`\`).
+                8. Code blocks using triple backticks (\`\`\`\` \`\`\` \`\`\`\`) with an optional language identifier for syntax highlighting.
+                9. Horizontal rule using ---.
+                10. Links using [title](URL).
+                          
+                            
+                Make sure the entire response is formatted correctly according to the Markdown syntax and the specified formatting.
+
                 - Include the analysis for generating an image based on the query and the formatted answer.
-                
                 
                 **Expected JSON formatted Output**
                 {{
-                  "answer": "HTML-formatted string",
+                  "answer": "markdown-formatted string",
                   "shouldGenerateImage": "boolean"
-                }}  
-                
+                }}                  
                 
                 `
 
@@ -460,8 +463,9 @@ export class BotService {
                 const llm_structured = llm.withStructuredOutput(outputSchema)
 
                 const formattedResponse = await llm_structured.invoke(promptValue)
-                // const jsonResponse = JSON.parse(`${formattedResponse}`)
-                console.log(formattedResponse)
+
+                // const jsonResponse = JSON.parse(stringJSON)
+                console.log("formatted json response", formattedResponse)
 
 
 
@@ -473,7 +477,11 @@ export class BotService {
                         is_bot: true,
                         image_url: "",
                         user_id: req.user.sub,
+                    }, {
+                        transaction
                     });
+
+                    await transaction.commit()
 
                     return {
                         statusCode: 200,
@@ -484,6 +492,7 @@ export class BotService {
                     throw new Error("An error occurred while generating the response.");
                 }
             } else {
+                await transaction.rollback()
                 throw new Error("No API key found.");
             }
         } catch (error: any) {

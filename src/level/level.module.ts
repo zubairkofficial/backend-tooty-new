@@ -12,9 +12,10 @@ import { Subject } from 'src/subject/entity/subject.entity';
 import { Bot } from 'src/bot/entities/bot.entity';
 import { JoinTeacherSubjectLevel } from 'src/profile/entities/join-teacher-subject-level.entity';
 import { File } from 'src/context_data/entities/file.entity';
+import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Level, School, StudentProfile, TeacherProfile,  Bot, JoinTeacherSubjectLevel, Subject, File]), ConfigModule],
+  imports: [SequelizeModule.forFeature([Level, School, StudentProfile, TeacherProfile, Bot, JoinTeacherSubjectLevel, Subject, File, Puzzle]), ConfigModule],
   controllers: [LevelController],
   providers: [LevelService, JwtService]
 })

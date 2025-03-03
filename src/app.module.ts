@@ -46,6 +46,10 @@ import { JoinSchoolAdmin } from './school/entities/join-school-admin.entity';
 import { DistrictModule } from './district/district.module';
 import { District } from './district/entity/district.entity';
 import { SuperIntendentProfile } from './profile/entities/super-intendent-profile.entity';
+import { AssignmentModule } from './assignment/assignment.module';
+import { PuzzleModule } from './puzzle/puzzle.module';
+import { Puzzle } from './puzzle/entity/puzzle.entity';
+import { PuzzleAttempt } from './puzzle/entity/puzzle-attempts.entity';
 
 @Module({
   imports: [
@@ -64,7 +68,7 @@ import { SuperIntendentProfile } from './profile/entities/super-intendent-profil
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadModels: true,
-      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile ,AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School, JoinSchoolAdmin, District, SuperIntendentProfile],
+      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile, AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School, JoinSchoolAdmin, District, SuperIntendentProfile, Puzzle, PuzzleAttempt],
       synchronize: process.env.DB_SYNCHRONIZE == 'true' ? true : false,
       logging: true,
 
@@ -99,6 +103,8 @@ import { SuperIntendentProfile } from './profile/entities/super-intendent-profil
     SchoolModule,
     StatsModule,
     DistrictModule,
+    AssignmentModule,
+    PuzzleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

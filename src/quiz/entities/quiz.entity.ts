@@ -34,11 +34,11 @@ export class Quiz extends Model<Quiz> {
   end_time: Date;
 
   @Column({ type: DataType.INTEGER, allowNull: false })
-  duration: number; // Duration in minutes
+  duration: number;
 
   @Default(0)
   @Column({ type: DataType.INTEGER, allowNull: true })
-  total_score: number; // Duration in minutes
+  total_score: number;
 
   @ForeignKey(() => Level)
   @Column({ type: DataType.INTEGER, allowNull: false })
@@ -58,7 +58,7 @@ export class Quiz extends Model<Quiz> {
   @BelongsTo(() => Level)
   level!: Level;
 
-  @BelongsTo(() => Subject, {onDelete: "CASCADE"})
+  @BelongsTo(() => Subject, { onDelete: "CASCADE" })
   subject!: Subject;
 
   @HasMany(() => Question, { onDelete: 'CASCADE' })

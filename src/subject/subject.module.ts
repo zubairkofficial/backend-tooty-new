@@ -13,9 +13,10 @@ import { School } from 'src/school/entities/school.entity';
 import { File } from 'src/context_data/entities/file.entity';
 import { User } from 'src/user/entities/user.entity';
 import { Quiz } from 'src/quiz/entities/quiz.entity';
+import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Subject, Level, JoinTeacherSubjectLevel, TeacherProfile, Bot, School, File, User, Quiz]), ConfigModule],
+  imports: [SequelizeModule.forFeature([Subject, Level, JoinTeacherSubjectLevel, TeacherProfile, Bot, School, File, User, Quiz, Puzzle]), ConfigModule],
   controllers: [SubjectController],
   providers: [SubjectService, JwtService]
 })
