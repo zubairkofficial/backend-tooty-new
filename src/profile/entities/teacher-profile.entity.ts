@@ -17,6 +17,7 @@ import { Subject } from 'src/subject/entity/subject.entity';
 import { User } from 'src/user/entities/user.entity';
 import { JoinTeacherSubjectLevel } from './join-teacher-subject-level.entity';
 import { Op } from 'sequelize';
+import { PuzzleAssignment } from 'src/puzzle/entity/puzzle-assignment.entity';
 
 
 @Table({
@@ -29,7 +30,7 @@ export class TeacherProfile extends Model {
     @Column({
         type: DataType.INTEGER,
     })
-    id: number; //it must be equal to the id in User table
+    id: number;
 
     @Column({
         type: DataType.STRING
@@ -65,6 +66,9 @@ export class TeacherProfile extends Model {
 
     @HasMany(() => Quiz, { onDelete: 'CASCADE' })
     quizes!: Quiz[]
+
+    @HasMany(() => PuzzleAssignment, { onDelete: 'CASCADE' })
+    teacher_puzzles!: PuzzleAssignment[]
 
     @BelongsToMany(() => Subject, () => JoinTeacherSubjectLevel)
     subjects!: Subject[]

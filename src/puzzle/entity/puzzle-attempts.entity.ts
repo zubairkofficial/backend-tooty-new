@@ -1,6 +1,7 @@
 import { BelongsTo, Column, DataType, Default, ForeignKey, HasMany, Model, Table, Unique } from "sequelize-typescript";
 import { Puzzle } from "./puzzle.entity";
 import { StudentProfile } from "src/profile/entities/student-profile.entity";
+import { PuzzleAssignment } from "./puzzle-assignment.entity";
 
 
 
@@ -45,15 +46,15 @@ export class PuzzleAttempt extends Model {
     obtained_score: number;
 
     @Unique("student-puzzle")
-    @ForeignKey(() => Puzzle)
+    @ForeignKey(() => PuzzleAssignment)
     @Column({
         type: DataType.INTEGER,
         allowNull: false
     })
-    puzzle_id: number;
+    puzzle_assignment_id: number;
 
-    @BelongsTo(() => Puzzle, { onDelete: "CASCADE" })
-    puzzle!: Puzzle
+    @BelongsTo(() => PuzzleAssignment, { onDelete: "CASCADE" })
+    assigned_puzzle!: PuzzleAssignment
 
     @Unique("student-puzzle")
     @ForeignKey(() => StudentProfile)
@@ -65,6 +66,5 @@ export class PuzzleAttempt extends Model {
 
     @BelongsTo(() => StudentProfile)
     student!: StudentProfile
-
 
 }

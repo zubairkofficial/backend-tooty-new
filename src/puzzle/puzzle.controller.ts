@@ -3,7 +3,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { Role } from 'src/utils/roles.enum';
-import { CreatePuzzleDto, DeletePuzzleDto, InitializeSubmitPuzzleDto, SubmitPuzzleDto, UpdatePuzzleDto } from './dto/puzzle.dto';
+import { CreatePuzzleAssignmnet, CreatePuzzleDto, DeletePuzzleAssignmnet, DeletePuzzleDto, InitializeSubmitPuzzleDto, SubmitPuzzleDto, UpdatePuzzleDto } from './dto/puzzle.dto';
 import { PuzzleService } from './puzzle.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerStorageConfig } from 'src/config/multer.config';
@@ -14,7 +14,45 @@ export class PuzzleController {
     constructor(
         private readonly puzzleService: PuzzleService
     ) { }
+    /////// teacher routes
 
+    @Delete("/delete-puzzle-assignment")
+    @Roles(Role.TEACHER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    async deletePuzzleAssignment(@Body() deletePuzzleAssignmentDto: DeletePuzzleAssignmnet, @Req() req: any) {
+        return this.puzzleService.deletePuzzleAssignment(deletePuzzleAssignmentDto, req)
+    }
+
+    @Post("/create-puzzle-assignment")
+    @Roles(Role.TEACHER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    async createPuzzleAssignment(@Body() createPuzzleAssignment: CreatePuzzleAssignmnet, @Req() req: any) {
+        return this.puzzleService.createPuzzleAssignment(createPuzzleAssignment, req)
+    }
+
+    @Get("/assigned-puzzle-by-id/:assigned_puzzle_id")
+    @Roles(Role.USER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    async getAssignedPuzzleByID(@Param('assigned_puzzle_id') assigned_puzzle_id: string) {
+        return this.puzzleService.getAssignedPuzzleByID(Number(assigned_puzzle_id))
+    }
+
+    //teacher will get all created assigmnets
+    @Get("/get-all-puzzle-assignments")
+    @Roles(Role.TEACHER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    async getAllAssignedPuzzles(@Req() req: any) {
+        return this.puzzleService.getAllAssignedPuzzles(req)
+    }
+
+    //get puzzles created by admin, bu level and subject
+    @Get("/get-by-level-subject")
+    @Roles(Role.TEACHER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    async getByLevelSubject(@Req() req: any) {
+        return this.puzzleService.getByLevelSubject(req)
+    }
+    /////
     @Post('/initialize-submit-puzzle')
     @Roles(Role.USER)
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,6 +71,7 @@ export class PuzzleController {
         return this.puzzleService.submitPuzzle(image, submitPuzzleDto, req);
     }
 
+    //create puzzle by super admin
     @Post('/')
     @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -41,6 +80,7 @@ export class PuzzleController {
         return this.puzzleService.create(image, createPuzzleDto);
     }
 
+    //delete puzzle by super admin
     @Delete('/')
     @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,6 +88,7 @@ export class PuzzleController {
         return this.puzzleService.delete(deletePuzzleDto);
     }
 
+    //get all puzzle by super admin
     @Get('/all')
     @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -58,6 +99,10 @@ export class PuzzleController {
         return this.puzzleService.getAll(page, limit);
     }
 
+
+
+
+    // get puzzle by level by student
     @Get('/get-by-level')
     @Roles(Role.USER)
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -66,13 +111,15 @@ export class PuzzleController {
     }
 
 
+    //get by id puzzle
     @Get('/:puzzle_id')
-    @Roles(Role.USER, Role.SUPER_ADMIN)
+    @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)
     async getByID(@Param('puzzle_id') puzzle_id: string) {
         return this.puzzleService.getByID(puzzle_id);
     }
 
+    //update puzzle by super admin
     @Patch("/")
     @Roles(Role.SUPER_ADMIN)
     @UseGuards(JwtAuthGuard, RolesGuard)

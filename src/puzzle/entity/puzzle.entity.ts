@@ -2,7 +2,7 @@ import { BelongsTo, Column, DataType, Default, ForeignKey, HasMany, Model, Table
 import { Level } from "src/level/entity/level.entity";
 import { Subject } from "src/subject/entity/subject.entity";
 import { PuzzleAttempt } from "./puzzle-attempts.entity";
-
+import { PuzzleAssignment } from "./puzzle-assignment.entity";
 
 
 @Table({
@@ -58,7 +58,8 @@ export class Puzzle extends Model {
     @BelongsTo(() => Level)
     level!: Level;
 
-    @HasMany(() => PuzzleAttempt, { onDelete: "CASCADE" })
-    solve_attempts!: PuzzleAttempt[]
+    @HasMany(() => PuzzleAssignment,{ onDelete: "CASCADE" })
+    puzzle_assignments!: PuzzleAssignment[]
+    
 
 }

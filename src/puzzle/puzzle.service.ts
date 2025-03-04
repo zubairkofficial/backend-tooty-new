@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Sequelize } from 'sequelize-typescript';
-import { CreatePuzzleDto, DeletePuzzleDto, InitializeSubmitPuzzleDto, SubmitPuzzleDto, UpdatePuzzleDto } from './dto/puzzle.dto';
+import { CreatePuzzleAssignmnet, CreatePuzzleDto, DeletePuzzleAssignmnet, DeletePuzzleDto, InitializeSubmitPuzzleDto, SubmitPuzzleDto, UpdatePuzzleDto } from './dto/puzzle.dto';
 import { Puzzle } from './entity/puzzle.entity';
 import { Model, Op } from 'sequelize';
 import { PuzzleAttempt } from './entity/puzzle-attempts.entity';
@@ -11,6 +11,8 @@ import { join } from 'path';
 import { z } from 'zod';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { Level } from 'src/level/entity/level.entity';
+import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { PuzzleAssignment } from './entity/puzzle-assignment.entity';
 
 const output = z.object({
     remarks: z.string(),
@@ -131,18 +133,18 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
     }
 
     async createSubmitPuzzle(submitPuzzleDto: InitializeSubmitPuzzleDto, req: any) {
-        const { puzzle_id } = submitPuzzleDto
+        const { puzzle_assignment_id } = submitPuzzleDto
 
         try {
 
-            const puzzle = await Puzzle.findByPk(Number(puzzle_id))
+            const puzzle = await PuzzleAssignment.findByPk(Number(puzzle_assignment_id))
 
             if (!puzzle) {
-                throw new Error("No puzzle exist with given ID")
+                throw new Error("No puzzle assignment exist with given ID")
             }
 
             await PuzzleAttempt.create({
-                puzzle_id: Number(puzzle_id),
+                puzzle_assignment_id: Number(puzzle_assignment_id),
                 bot_remarks: "",
                 obtained_marks: 0,
                 student_id: req.user.sub,
@@ -163,19 +165,23 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
     }
 
     async submitPuzzle(file: Express.Multer.File, submitPuzzleDto: SubmitPuzzleDto, req: any) {
-        const { puzzle_id } = submitPuzzleDto
+        const { puzzle_assignment_id } = submitPuzzleDto
 
         try {
 
-            const puzzle = await Puzzle.findByPk(Number(puzzle_id))
+            const puzzle = await PuzzleAssignment.findByPk(Number(puzzle_assignment_id), {
+                include: [{
+                    model: Puzzle
+                }]
+            })
             if (!puzzle) {
                 throw new HttpException("No puzzle found wiht ID", HttpStatus.BAD_REQUEST)
             }
 
             let puzzle_submission = await PuzzleAttempt.findOne({
                 where: {
-                    puzzle_id: {
-                        [Op.eq]: Number(puzzle_id)
+                    puzzle_assignment_id: {
+                        [Op.eq]: Number(puzzle_assignment_id)
                     },
                     student_id: {
                         [Op.eq]: req.user.sub
@@ -190,7 +196,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             if (!puzzle_submission) {
                 puzzle_submission = await PuzzleAttempt.create({
                     image_url: file.filename,
-                    puzzle_id: Number(puzzle_id),
+                    puzzle_assignment_id: Number(puzzle_assignment_id),
                     bot_remarks: "",
                     obtained_marks: 0,
                     student_id: req.user.sub,
@@ -198,7 +204,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                 })
             }
 
-            const res = await this.puzzleMarking(file.filename, puzzle_submission.id, puzzle)
+            const res = await this.puzzleMarking(file.filename, puzzle_submission.id, puzzle.puzzle)
             if (res) {
                 return {
                     statusCode: 200,
@@ -326,11 +332,156 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
         }
     }
 
+    async getAssignedPuzzleByID(assigned_puzzle_id: number) {
+        try {
+
+
+            const puzzle = await PuzzleAssignment.findByPk(assigned_puzzle_id, {
+                include: [{
+                    model: Puzzle,
+                    include: [{
+                        model: Subject
+                    }, {
+                        model: Level
+                    }]
+                }]
+            })
+            return {
+                statusCode: 200,
+                data: puzzle
+            }
+        } catch (error) {
+            throw new HttpException(error.message || 'Failed to deleted puzzle assignment', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async deletePuzzleAssignment(deletePuzzleAssignmnet: DeletePuzzleAssignmnet, req: any) {
+        try {
+
+            const puzzle_attempts_exist = await PuzzleAttempt.findOne({
+                where: {
+                    puzzle_assignment_id: {
+                        [Op.eq]: deletePuzzleAssignmnet.puzzle_assignment_id
+                    }
+                }
+            })
+
+            if (puzzle_attempts_exist) {
+                throw new HttpException("Can't delete puzzle assignment as attempted by students", HttpStatus.BAD_REQUEST)
+                return
+            }
+            await PuzzleAssignment.destroy({
+                where: {
+                    id: {
+                        [Op.eq]: deletePuzzleAssignmnet.puzzle_assignment_id
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                message: "Puzzle Assignment deleted successfully"
+            }
+        } catch (error) {
+            throw new HttpException(error.message || 'Failed to deleted puzzle assignment', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async createPuzzleAssignment(createPuzzleAssignment: CreatePuzzleAssignmnet, req: any) {
+        try {
+
+            const puzzles = await PuzzleAssignment.create({
+                teacher_id: req.user.sub,
+                puzzle_id: createPuzzleAssignment.puzzle_id
+            })
+            return {
+                statusCode: 200,
+                message: "Puzzle Assignment created successfully"
+            }
+        } catch (error) {
+            throw new HttpException(error.message || 'Failed to create puzzle assignment', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getAllAssignedPuzzles(req: any) {
+        try {
+
+            const puzzles = await PuzzleAssignment.findAll({
+                where: {
+                    teacher_id: {
+                        [Op.eq]: req.user.sub
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                data: puzzles
+            }
+        } catch (error) {
+            throw new HttpException(error.message || 'Failed to find Puzzles', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getByLevelSubject(req: any) {
+        try {
+            const teacher = await TeacherProfile.findByPk(req.user.sub, {
+                include: [{
+                    model: Subject,
+                    attributes: ["id"]
+                },]
+            })
+            if (!teacher) {
+                throw new HttpException("error getting puzzles, no teacher found", HttpStatus.BAD_REQUEST)
+            }
+            const puzzles = await Puzzle.findAll({
+                include: [
+                    {
+                        model: Subject
+                    },
+                    {
+                        model: Level
+                    },
+                    {
+                        required: false,
+                        model: PuzzleAssignment,
+                        where: {
+                            teacher_id: {
+                                [Op.eq]: req.user.sub
+                            }
+                        }
+                    }],
+                where: {
+                    level_id: {
+                        [Op.eq]: req.user.level_id
+                    },
+                    subject_id: {
+                        [Op.in]: teacher.subjects.map((subject) => subject.id)
+                    }
+                }
+            })
+            return {
+                statusCode: 200,
+                data: puzzles
+            }
+        } catch (error) {
+            throw new HttpException(error.message || 'Failed to find Puzzle with this ID', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     async getByLevel(req: any) {
         try {
-            const puzzles = await Puzzle.findAll({
+            const puzzles = await PuzzleAssignment.findAll({
                 include: [{
+                    required: true,
+                    model: Puzzle,
+                    include: [{
+                        model: Subject
+                    }],
+                    where: {
+                        level_id: {
+                            [Op.eq]: req.user.level_id
+                        }
+                    }
+                },
+                {
                     required: false,
                     model: PuzzleAttempt,
                     where: {
@@ -338,13 +489,9 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                             [Op.eq]: req.user.sub
                         }
                     }
-                }],
-                where: {
-                    level_id: {
-                        [Op.eq]: req.user.level_id
-                    }
-                }
+                }]
             })
+
             return {
                 statusCode: 200,
                 data: puzzles

@@ -46,15 +46,29 @@ export class UpdatePuzzleDto {
 }
 export class InitializeSubmitPuzzleDto {
     @IsNotEmpty()
-    puzzle_id: string
+    @IsNumber()
+    puzzle_assignment_id: number
 }
 
 export class SubmitPuzzleDto {
     @IsNotEmpty()
-    puzzle_id: string
+    puzzle_assignment_id: string
 }
 
 export class DeletePuzzleDto {
     @IsNumber()
     puzzle_id: number
+}
+
+
+export class CreatePuzzleAssignmnet {
+    @IsNotEmpty()
+    @IsNumber()
+    puzzle_id: number
+}
+
+export class DeletePuzzleAssignmnet {
+    @IsNotEmpty()
+    @IsNumber()
+    puzzle_assignment_id: number
 }

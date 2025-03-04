@@ -18,9 +18,10 @@ import { SuperIntendentProfile } from './entities/super-intendent-profile.entity
 import { District } from 'src/district/entity/district.entity';
 import { Bot } from 'src/bot/entities/bot.entity';
 import { PuzzleAttempt } from 'src/puzzle/entity/puzzle-attempts.entity';
+import { PuzzleAssignment } from 'src/puzzle/entity/puzzle-assignment.entity';
 
 @Module({
-    imports: [SequelizeModule.forFeature([SuperAdminProfile,StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, School, Subject,User, ParentProfile, JoinSchoolAdmin,SuperIntendentProfile, District, Bot, PuzzleAttempt]), ConfigModule],
+    imports: [SequelizeModule.forFeature([SuperAdminProfile, StudentProfile, TeacherProfile, AdminProfile, JoinTeacherSubjectLevel, School, Subject, User, ParentProfile, JoinSchoolAdmin, SuperIntendentProfile, District, Bot, PuzzleAttempt, PuzzleAssignment]), ConfigModule],
     controllers: [ProfileController],
     providers: [ProfileService, JwtService]
 })

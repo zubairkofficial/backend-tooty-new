@@ -9,9 +9,10 @@ import { Level } from 'src/level/entity/level.entity';
 import { Subject } from 'src/subject/entity/subject.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { ConfigModule } from '@nestjs/config';
+import { PuzzleAssignment } from './entity/puzzle-assignment.entity';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Subject, Level, Puzzle, PuzzleAttempt, StudentProfile]), ConfigModule],
+  imports: [SequelizeModule.forFeature([Subject, Level, Puzzle, PuzzleAttempt, StudentProfile, PuzzleAssignment]), ConfigModule],
   controllers: [PuzzleController],
   providers: [PuzzleService, JwtService]
 })
