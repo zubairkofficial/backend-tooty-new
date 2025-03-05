@@ -20,7 +20,7 @@ export class PuzzleAttempt extends Model {
     id: number;
 
     @Column({
-        type: DataType.TEXT,
+        type: DataType.STRING,
         allowNull: true
     })
     image_url: string;

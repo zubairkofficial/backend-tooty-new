@@ -25,6 +25,9 @@ import { Transaction } from 'sequelize';
 import { SuperIntendentProfile } from './entities/super-intendent-profile.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { JoinSchoolAdmin } from 'src/school/entities/join-school-admin.entity';
+import { PuzzleAttempt } from 'src/puzzle/entity/puzzle-attempts.entity';
+import { PuzzleAssignment } from 'src/puzzle/entity/puzzle-assignment.entity';
+import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
 
 @Injectable()
 export class ProfileService {
@@ -753,6 +756,82 @@ export class ProfileService {
     }
 
 
+    async getChildrenPuzzleAttempts(params: any, req: any, page: number, limit: number) {
+        try {
+            console.log(`Fetching student profile for student_id: ${params.child_id}`);
+
+            // Input validation
+            if (!params.child_id || isNaN(params.child_id)) {
+                throw new HttpException(
+                    {
+                        statusCode: HttpStatus.BAD_REQUEST,
+                        message: "Invalid student ID provided.",
+                    },
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            // Calculate offset for pagination
+            const offset = (page - 1) * limit;
+
+            // Use findAndCountAll to get both the paginated data and the total count
+            const { rows: data, count: total } = await PuzzleAttempt.findAndCountAll({
+                where: {
+                    student_id: {
+                        [Op.eq]: params.child_id,
+                    },
+                    marked: true,
+                },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    {
+                        model: StudentProfile,
+                        include: [
+                            {
+                                model: ParentProfile,
+                                where: {
+                                    id: {
+                                        [Op.eq]: req.user.sub,
+                                    },
+                                },
+                            },
+                        ],
+                        where: {
+                            id: {
+                                [Op.eq]: params.child_id,
+                            },
+                        },
+                    },
+                    {
+                        model: PuzzleAssignment,
+                        include: [
+                            {
+                                model: Puzzle,
+                            },
+                        ],
+                    },
+                ],
+                limit,
+                offset,
+            });
+
+            return {
+                statusCode: HttpStatus.OK,
+                data: {
+                    data: data,
+                    total,
+                    page,
+                    totalPages: Math.ceil(total / limit),
+                },
+            };
+        } catch (error) {
+            console.error('Error in getChildrenPuzzleAttempts:', error);
+            throw new HttpException(
+                error.message || "Error fetching student profile.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
 
     async getChildrenById(params: any, req: any) {
         try {
@@ -769,11 +848,20 @@ export class ProfileService {
                 );
             }
 
+            // Fetch the student profile and verify that the child belongs to the parent (req.user.sub)
             const studentProfile = await StudentProfile.findOne({
                 where: {
                     id: params.child_id,
                 },
                 include: [
+                    {
+                        model: ParentProfile,
+                        where: {
+                            id: {
+                                [Op.eq]: req.user.sub,
+                            },
+                        },
+                    },
                     {
                         model: School,
                         as: 'school',
@@ -785,20 +873,6 @@ export class ProfileService {
                     {
                         model: User,
                         as: 'user',
-                    },
-                    {
-                        required: false,
-                        model: QuizAttempt,
-                        as: 'attempted_quizes',
-                        where: {
-                            marked: true
-                        },
-                        include: [
-                            {
-                                model: Quiz,
-                                as: 'quiz',
-                            },
-                        ],
                     },
                 ],
             });
@@ -824,6 +898,84 @@ export class ProfileService {
             );
         }
     }
+
+    async getAttemptQuizes(params: any, req: any, page: number, limit: number) {
+        try {
+            // Validate child_id
+            if (!params.child_id || isNaN(params.child_id)) {
+                throw new HttpException(
+                    {
+                        statusCode: HttpStatus.BAD_REQUEST,
+                        message: "Invalid student ID provided.",
+                    },
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            // First, ensure the student belongs to the parent calling this function.
+            const studentProfile = await StudentProfile.findOne({
+                where: {
+                    id: params.child_id,
+                },
+                include: [
+                    {
+                        model: ParentProfile,
+                        where: {
+                            id: {
+                                [Op.eq]: req.user.sub,
+                            },
+                        },
+                    },
+                ],
+            });
+
+            if (!studentProfile) {
+                return {
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: `No student profile found for ID: ${params.child_id} linked to this parent.`,
+                };
+            }
+
+            // Calculate offset for pagination
+            const offset = (page - 1) * limit;
+
+            // Fetch paginated quiz attempts for this student
+            const { rows: quizAttempts, count } = await QuizAttempt.findAndCountAll({
+                where: {
+                    student_id: {
+                        [Op.eq]: params.child_id,
+                    },
+                    marked: true,
+                },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    {
+                        model: Quiz,
+                        as: 'quiz',
+                    },
+                ],
+                limit,
+                offset,
+            });
+
+            return {
+                statusCode: HttpStatus.OK,
+                data: {
+                    data: quizAttempts,
+                    total: count,
+                    page,
+                    totalPages: Math.ceil(count / limit),
+                },
+            };
+        } catch (error) {
+            console.error('Error in getAttemptQuizes:', error);
+            throw new HttpException(
+                error.message || "Error fetching quiz attempts.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
 
 
     async getStudentsByLevel(req: any) {

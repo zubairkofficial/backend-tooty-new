@@ -37,10 +37,30 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get Super Admin Profile' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
-  async getChildrenById(@Req() req: any, @Param() params) {
+  async getChildrenById(@Req() req: any, @Param() params, @Query('page') page?: number,
+    @Query('limit') limit?: number) {
     return this.profileServices.getChildrenById(params, req);
   }
 
+  @Get('get-children-attempted-puzzles/:child_id')
+  @Roles(Role.PARENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getChildrenAttemptedPuzzles(@Req() req: any, @Param() params, @Query('page') page?: number,
+    @Query('limit') limit?: number) {
+    return this.profileServices.getChildrenPuzzleAttempts(params, req, page, limit);
+  }
+
+  @Get('get-children-attempted-quizzes/:child_id')
+  @Roles(Role.PARENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Get Super Admin Profile' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved super admin profile.' })
+  async getChildrenAttemptedQuizzes(@Req() req: any, @Param() params, @Query('page') page?: number,
+    @Query('limit') limit?: number) {
+    return this.profileServices.getAttemptQuizes(params, req, page, limit);
+  }
   //Super admin management
 
   @Get('get-superadmin-profile')

@@ -112,7 +112,8 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                 await PuzzleAttempt.update({
                     marked: true,
                     obtained_score: Number(res.obtained_marks),
-                    bot_remarks: res.remarks
+                    bot_remarks: res.remarks,
+                    image_url: fileName
 
                 }, {
                     where: {
@@ -166,7 +167,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
 
     async submitPuzzle(file: Express.Multer.File, submitPuzzleDto: SubmitPuzzleDto, req: any) {
         const { puzzle_assignment_id } = submitPuzzleDto
-
+        console.log("file", file, file.filename)
         try {
 
             const puzzle = await PuzzleAssignment.findByPk(Number(puzzle_assignment_id), {
@@ -420,25 +421,27 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
         }
     }
 
-    async getByLevelSubject(req: any) {
+    async getByLevelSubject(req: any, page: number = 1, limit: number = 10) {
         try {
             const teacher = await TeacherProfile.findByPk(req.user.sub, {
                 include: [{
                     model: Subject,
                     attributes: ["id"]
-                },]
-            })
+                }],
+            });
+
             if (!teacher) {
-                throw new HttpException("error getting puzzles, no teacher found", HttpStatus.BAD_REQUEST)
+                throw new HttpException("Error getting puzzles, no teacher found", HttpStatus.BAD_REQUEST);
             }
-            const puzzles = await Puzzle.findAll({
+
+            // Calculate the offset based on the page and limit
+            const offset = (page - 1) * limit;
+
+            // Fetch paginated puzzles using findAndCountAll
+            const { rows: puzzles, count: total } = await Puzzle.findAndCountAll({
                 include: [
-                    {
-                        model: Subject
-                    },
-                    {
-                        model: Level
-                    },
+                    { model: Subject },
+                    { model: Level },
                     {
                         required: false,
                         model: PuzzleAssignment,
@@ -447,26 +450,42 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                                 [Op.eq]: req.user.sub
                             }
                         }
-                    }],
+                    }
+                ],
                 where: {
                     level_id: {
                         [Op.eq]: req.user.level_id
                     },
                     subject_id: {
-                        [Op.in]: teacher.subjects.map((subject) => subject.id)
+                        [Op.in]: teacher.subjects.map(subject => subject.id)
                     }
-                }
-            })
+                },
+                limit,   // Number of records to fetch
+                offset,  // Starting point for the records
+                order: [['createdAt', 'DESC']], // Optional: Sort by creation date
+            });
+
+            // Calculate the total number of pages
+            const totalPages = Math.ceil(total / limit);
+
             return {
                 statusCode: 200,
-                data: puzzles
-            }
+                message: "Puzzles fetched successfully",
+                data: puzzles,    // Paginated puzzles
+                total,      // Total number of puzzles
+                page,       // Current page
+                totalPages  // Total number of pages
+            };
         } catch (error) {
-            throw new HttpException(error.message || 'Failed to find Puzzle with this ID', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException(
+                error.message || 'Failed to find Puzzle with this ID',
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
-    async getByLevel(req: any) {
+
+    async getByLevel(req: any, page: number = 1, limit: number = 10) {
         try {
             const puzzles = await PuzzleAssignment.findAll({
                 include: [{
@@ -502,6 +521,8 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
     }
 
 
+
+
     async getAll(page: number = 1, limit: number = 10) {
         try {
 
@@ -530,5 +551,84 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             throw new HttpException(error.message || 'Failed to find Puzzle with this ID', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+
+    async getPuzzleAttemptsByStudentSubject(params: any, req: any, page: number = 1, limit: number = 10) {
+        if (!params.student_id || !params.subject_id) {
+            throw new Error("subject_id and student_id must be defined in params: /:subject_id/:student_id");
+        }
+
+        try {
+            const teacher_has_subject = await Subject.findByPk(Number(params.subject_id), {
+                include: [{
+                    required: true,
+                    model: TeacherProfile,
+                    where: {
+                        id: {
+                            [Op.eq]: req.user.sub
+                        }
+                    }
+                }]
+            });
+            console.log("teacher_has_subject", teacher_has_subject);
+            if (!teacher_has_subject) {
+                throw new Error("Subject is UnAvailable to teacher");
+            }
+
+            // Calculate the offset for pagination
+            const offset = (page - 1) * limit;
+
+            // Use findAndCountAll to get both the data and the total count
+            const { rows: data, count: total } = await PuzzleAttempt.findAndCountAll({
+                where: {
+                    student_id: {
+                        [Op.eq]: Number(params.student_id)
+                    },
+                    marked: {
+                        [Op.eq]: true
+                    }
+                },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    {
+                        model: PuzzleAssignment,
+                        include: [{
+                            model: Puzzle,
+                            where: {
+                                subject_id: {
+                                    [Op.eq]: Number(params.subject_id)
+                                }
+                            }
+                        }],
+                        where: {
+                            teacher_id: {
+                                [Op.eq]: req.user.sub
+                            }
+                        }
+                    }
+                ],
+                limit,
+                offset
+            });
+
+            // Calculate total number of pages
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                statusCode: 200,
+                data,
+                total,
+                page,
+                totalPages
+            };
+
+        } catch (error) {
+            throw new HttpException(
+                error.message || "Error fetching puzzle attempts by student and subject.",
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
 
 }

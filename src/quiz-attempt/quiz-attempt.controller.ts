@@ -1,5 +1,5 @@
 // src/quiz-attempt/quiz-attempt.controller.ts
-import { Controller, Post, Body, UseGuards, Req, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Param, Query } from '@nestjs/common';
 import { QuizAttemptService } from './quiz-attempt.service';
 import { JwtAuthGuard } from 'src/guards/jwtVerifyAuth.guard';
 import { CreateSubmitQuizAttemptDto, SubmitQuizAttemptDto } from './dto/quiz-attempt.dto';
@@ -22,8 +22,9 @@ export class QuizAttemptController {
   @Get('/:subject_id/:student_id')
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async getQuizAttemptsByStudentSubject(@Param() params: any, @Req() req: any) {
-    return this.quizAttemptService.getQuizAttemptsByStudentSubject(params, req);
+  async getQuizAttemptsByStudentSubject(@Param() params: any, @Req() req: any, @Query('page') page?: number,
+    @Query('limit') limit?: number) {
+    return this.quizAttemptService.getQuizAttemptsByStudentSubject(params, req, page, limit);
   }
 
   @Get('student-quiz-history')

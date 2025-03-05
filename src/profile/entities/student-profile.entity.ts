@@ -60,6 +60,9 @@ export class StudentProfile extends Model {
     })
     parent_id: number;
 
+    @BelongsTo(() => ParentProfile)
+    parent!: ParentProfile;
+
     @BelongsTo(() => School, { onDelete: 'CASCADE' })
     school!: School
 

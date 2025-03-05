@@ -79,14 +79,12 @@ export class QuizAttemptService {
   }
 
 
-  async getQuizAttemptsByStudentSubject(params: any, req: any) {
+  async getQuizAttemptsByStudentSubject(params: any, req: any, page: number = 1, limit: number = 10) {
     if (!params.student_id || !params.subject_id) {
-      throw new Error("subject_id and student_id must be defined in params: /:subject_id/:student_id")
+      throw new Error("subject_id and student_id must be defined in params: /:subject_id/:student_id");
     }
 
     try {
-
-
       const teacher_has_subject = await Subject.findByPk(Number(params.subject_id), {
         include: [{
           required: true,
@@ -97,22 +95,23 @@ export class QuizAttemptService {
             }
           }
         }]
-      })
-      console.log("teacher_has_subject", teacher_has_subject)
-      if (teacher_has_subject === null || teacher_has_subject === undefined) {
-        throw new Error("Subject is UnAvailable to teacher")
+      });
+      console.log("teacher_has_subject", teacher_has_subject);
+      if (!teacher_has_subject) {
+        throw new Error("Subject is UnAvailable to teacher");
       }
 
-      const data = await QuizAttempt.findAll({
+      // Calculate the offset based on the page and limit
+      const offset = (page - 1) * limit;
+
+      // Use findAndCountAll to retrieve paginated data along with the total count
+      const { rows: data, count: total } = await QuizAttempt.findAndCountAll({
         where: {
           student_id: {
             [Op.eq]: Number(params.student_id)
-          },
-
+          }
         },
-        order: [
-          ['createdAt', 'DESC']
-        ],
+        order: [['createdAt', 'DESC']],
         include: [
           {
             model: Quiz,
@@ -127,12 +126,20 @@ export class QuizAttemptService {
             },
           },
         ],
-      })
+        limit,   // Number of records to fetch
+        offset   // Starting point for records
+      });
+
+      // Calculate total number of pages
+      const totalPages = Math.ceil(total / limit);
 
       return {
         statusCode: 200,
-        data
-      }
+        data,
+        total,
+        page,
+        totalPages
+      };
 
     } catch (error) {
       throw new HttpException(
@@ -141,6 +148,7 @@ export class QuizAttemptService {
       );
     }
   }
+
 
 
   async getQuizAttemptDetailById(params: any, req: any) {
