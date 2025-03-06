@@ -1,4 +1,4 @@
-import { BelongsTo, BelongsToMany, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
+import { BelongsTo, BelongsToMany, Column, DataType, Default, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
 import { AdminProfile } from 'src/profile/entities/admin-profile.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
@@ -32,9 +32,9 @@ export class School extends Model {
   description: string;
 
   @ForeignKey(() => SuperIntendentProfile)
+  @Default(null)
   @Column({
     type: DataType.INTEGER,
-    allowNull: false,
   })
   created_by_id: number;
 
