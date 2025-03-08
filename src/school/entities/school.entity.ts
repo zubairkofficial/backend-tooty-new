@@ -34,6 +34,7 @@ export class School extends Model {
   @ForeignKey(() => SuperIntendentProfile)
   @Column({
     type: DataType.INTEGER,
+    allowNull: false,
   })
   created_by_id: number;
 
