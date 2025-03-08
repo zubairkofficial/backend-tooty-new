@@ -12,7 +12,7 @@ import {
 } from "@langchain/community/vectorstores/pgvector";
 import { Pool, PoolConfig } from "pg";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-
+import * as nodemailer from 'nodemailer';
 import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
 import { unlink } from 'fs';
@@ -138,7 +138,7 @@ export class ContextDataService {
             if (file_attached) {
                 throw new Error("Delete Failed: File is in Use")
             }
-            
+
             const res = await File.destroy({
                 where: {
                     id: {
@@ -213,6 +213,28 @@ export class ContextDataService {
             return !!response;
         } catch (error) {
             console.log("error open ai key", error.message)
+            const transporter = nodemailer.createTransport({
+                host: `${process.env.EMAIL_HOST}`,
+                port: Number(`${process.env.EMAIL_PORT}`),
+                secure: false,
+                auth: {
+                    user: `${process.env.EMAIL_USERNAME}`,
+                    pass: `${process.env.EMAIL_PASSWORD}`,
+                },
+            });
+
+            // Send email
+            await transporter.sendMail({
+                from: `${process.env.EMAIL_FROM_ADDRESS}`,
+                to: "engrmuqeetahmad@gmail.com", // Use the provided email
+                subject: 'Your Open AI API key at Tooty',
+                text: `This is auto generated Email, There is a problem with OpenAI API key 
+                \n
+                the raw error is here ${error.message}
+                
+                `
+            });
+
             return false;
 
         }

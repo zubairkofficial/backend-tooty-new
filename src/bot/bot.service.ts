@@ -9,7 +9,7 @@ import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { tool } from "@langchain/core/tools";
 import { Response } from "express";
-
+import * as nodemailer from 'nodemailer';
 import { Chat } from "src/chat/entities/chat.entity";
 import { GenerateImageDto } from "./dto/generateImage.dto";
 import * as path from 'path'
@@ -65,6 +65,14 @@ export class BotService {
             api_key = api?.dalle
 
             if (api_key != "") {
+
+
+                // Validate API key
+                const isKeyValid = await this.validateOpenAIKeyWithLangChain(api_key, "DallE");
+                if (!isKeyValid) {
+                    throw new Error('The OpenAI API key is invalid or expired. Please update the key.');
+                }
+
                 console.log(generateImageDto.answer)
                 const tool = new DallEAPIWrapper({
                     n: 1, // Default
@@ -154,6 +162,45 @@ export class BotService {
         }
     }
 
+    async validateOpenAIKeyWithLangChain(apiKey: string, keyName: string): Promise<boolean> {
+        try {
+            const model = new ChatOpenAI({
+                openAIApiKey: apiKey,
+                temperature: 0,
+            });
+
+            // Perform a minimal test query
+            const response = await model.invoke('Validate OpenAI API key');
+            return !!response;
+        } catch (error) {
+            console.log("error open ai key", error.message)
+            const transporter = nodemailer.createTransport({
+                host: `${process.env.EMAIL_HOST}`,
+                port: Number(`${process.env.EMAIL_PORT}`),
+                secure: false,
+                auth: {
+                    user: `${process.env.EMAIL_USERNAME}`,
+                    pass: `${process.env.EMAIL_PASSWORD}`,
+                },
+            });
+
+            // Send email
+            await transporter.sendMail({
+                from: `${process.env.EMAIL_FROM_ADDRESS}`,
+                to: "engrmuqeetahmad@gmail.com", // Use the provided email
+                subject: 'Your Open AI API key at Tooty',
+                text: `This is auto generated Email, There is a problem with ${keyName} API key 
+                    \n
+                    the raw error is here ${error.message}
+                    
+                    `
+            });
+
+            return false;
+
+        }
+    }
+
     async queryBot(queryBot: QueryBot, req: any) {
         console.log("Data from message:", queryBot);
         let api_key = "";
@@ -192,6 +239,12 @@ export class BotService {
 
             if (api_key !== "") {
 
+
+                // Validate API key
+                const isKeyValid = await this.validateOpenAIKeyWithLangChain(api_key, "Open AI");
+                if (!isKeyValid) {
+                    throw new Error('The OpenAI API key is invalid or expired. Please update the key.');
+                }
 
                 // Generate embeddings for the query
                 const embeddings = new OpenAIEmbeddings({
@@ -265,19 +318,17 @@ export class BotService {
                 ////////////////
 
                 const system_prompt = `
-                **Do not inlclude any part of the prompt in the response**
+                
                 **Response Formatting**
                 **If the data includes any type of mathematical or physics or chemistry or any science related equations, formulas, equation references, equation terms, mathematical terms or mathematical expressions etc..., please provide them in LaTeX format, and wrap them in the following format:**
                  ## Mathematical, Physics, Chemistry or Any Science Related Expressions
 
                     **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
 
-                    **For block equations, use the \n\`\`\`math ... \`\`\`\n format as shown below:**
+                      **For block equations, use the $$ ... $$ format as shown below:**
 
-                    \n \`\`\`math
-                    E = mc^2
-                    \`\`\`\n
-                    \`\`\`\n
+                    $$ E = mc^2 $$
+                   
                            **Bot Specific Master Prompt:**
                         ${bot?.description}\n
 
@@ -328,6 +379,13 @@ export class BotService {
                             message instanceof SystemMessage ||
                             (message instanceof AIMessage && message.tool_calls.length == 0)
                     );
+
+                    // Create a new AIMessage instance with zero tool calls
+                    const newAIMessage = new AIMessage(`${bot.first_message}`);
+
+                    // Add the new AIMessage to the top of the conversationMessages array
+                    conversationMessages.unshift(newAIMessage);
+                    console.log("conversation message", conversationMessages)
                     const prompt = [
                         new SystemMessage(systemMessageContent),
                         ...conversationMessages,
@@ -419,11 +477,9 @@ export class BotService {
 
                     **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
 
-                    **For block equations, use the \n\`\`\`math ... \`\`\`\n format as shown below:**
+                    **For block equations, use the $$ ... $$ format as shown below:**
 
-                    \n \`\`\`math
-                    E = mc^2
-                    \`\`\`\n
+                    $$ E = mc^2 $$
                 
                 Please generate a response in Markdown format. The response should include:
 
@@ -630,7 +686,6 @@ export class BotService {
 
             await transaction.commit();
 
-            // Return the response immediately after commit
             return {
                 statusCode: 200,
                 message: "Bot Created successfully"
@@ -638,7 +693,6 @@ export class BotService {
         } catch (error) {
             await transaction.rollback();
             console.log(error);
-            // Make sure an error is thrown if something fails
             throw new HttpException(error.message || "Failed to create bot", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

@@ -38,7 +38,6 @@ You are an AI assistant tasked with evaluating student submissions based on an i
 *   **Base64 Encoded Image Data:** The image data will be provided within the 'image_url' field of the content array in the HumanMessage. You do *not* need to read from the file system. You already have the image data.
 *   **Teacher's Description:** <A comprehensive textual description of the student's task, including: the context of the image, clear instructions on what the student was expected to do, the criteria for evaluating the student's response (how marks are awarded and penalties applied), any constraints or rules, and quantifiable elements whenever possible.>
 *   **Total Possible Marks:** <Integer representing the total marks for the assignment.>
-*   **Ground Truth (Optional):** <A structured representation of the correct solution, if applicable. Leave blank if the Teacher Description provides all the necessary information to grade.>
 
 **Your Task:**
 
@@ -46,7 +45,7 @@ You are an AI assistant tasked with evaluating student submissions based on an i
 
 2.  **Understand the Task:** Carefully interpret the teacher's description to fully grasp what the student was supposed to do and how their work should be evaluated.
 
-3.  **Evaluate the Submission:** Compare the student's actions with the teacher's instructions and the optional Ground Truth. Assess whether the student followed all instructions and rules. Award and deduct marks according to the teacher's description.
+3.  **Evaluate the Submission:** Compare the student's actions with the teacher's instructions. Assess whether the student followed all instructions and rules. Award and deduct marks according to the teacher's description.
 
 4.  **Generate JSON Output:** Create a JSON object with the following structure:
 ** Do NOT add \`\`\`json before json data and \`\`\` after json data, it must be just json data starts with \{ and ends with \}**
@@ -176,7 +175,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                 }]
             })
             if (!puzzle) {
-                throw new HttpException("No puzzle found wiht ID", HttpStatus.BAD_REQUEST)
+                throw new Error("No puzzle found wiht ID")
             }
 
             let puzzle_submission = await PuzzleAttempt.findOne({
@@ -191,7 +190,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             })
 
             if (puzzle_submission.marked) {
-                throw new HttpException("puzzle already marked", HttpStatus.BAD_REQUEST)
+                throw new Error("puzzle already marked")
             }
 
             if (!puzzle_submission) {
@@ -215,6 +214,13 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             }
 
         } catch (error) {
+            const path = join(__dirname, '..', '..', 'images', `${file.filename}`);
+            fs.unlink(path, (err) => {
+                if (err) {
+                    throw new Error("unable to delete puzzle" + err.message)
+                    return
+                }
+            })
             console.log("error", error)
             throw new HttpException(error.message || 'Failed to create Puzzle', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
         }

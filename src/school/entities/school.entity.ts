@@ -32,7 +32,6 @@ export class School extends Model {
   description: string;
 
   @ForeignKey(() => SuperIntendentProfile)
-  @Default(null)
   @Column({
     type: DataType.INTEGER,
   })
