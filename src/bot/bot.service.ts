@@ -466,24 +466,28 @@ export class BotService {
                 console.log("answer", answer)
 
                 const template = `
-                **Do not inlclude any part of the prompt in the response**
-                - You are a model designed to analyze queries and their associated answers, formatting the response in detailed markdown and latex for equation while determining if generating an image is feasible.
-                - Do not change any of the text context of answer: {answer}, you work is just to apply markdown fomatting. you are not supposed to answer or re-write anything about answer.
-                Query: {query}
-                Answer: {answer}
+               **Do not include any part of the prompt or any internal analysis in the response**
 
-                **If the data includes any type of mathematical or physics or chemistry or any science related equations, formulas, equation references, equation terms, mathematical terms or mathematical expressions etc..., please provide them in LaTeX format, and wrap them in the following format:**
-                 ## Mathematical, Physics, Chemistry or Any Science Related Expressions
+- You are a model designed to perform two tasks:
+  1. Apply markdown formatting (and LaTeX formatting for scientific expressions) to the provided answer.
+  2. Analyze the given query and answer to decide if an image should be generated, setting the value of \`shouldGenerateImage\` to true or false.
 
-                    **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
+- Do not change any of the original text content of the answer: {answer}. Your job is solely to format it according to the instructions below.
 
-                    **For block equations, use the $$ ... $$ format as shown below:**
+- If the data includes any mathematical, physics, chemistry, or any science-related equations, formulas, references, or expressions, please provide them in LaTeX format using the following guidelines:
 
-                    $$ E = mc^2 $$
-                
-                Please generate a response in Markdown format. The response should include:
+  ## Mathematical, Physics, Chemistry or Any Science Related Expressions
 
-                1. Headings using # for H1, ## for H2, ### for H3, and so on.
+  **For inline LaTeX, use $ ... $, such as $ E = mc^2 $.**
+
+  **For block equations, use the $$ ... $$ format as shown below:**
+
+  $$
+  E = mc^2
+  $$
+
+- The markdown formatting requirements are:
+   1. Headings using # for H1, ## for H2, ### for H3, and so on.
                 2. Bold text using ** around the text.
                 3. Italicized text using * around the text.
                 4. Blockquotes using > at the beginning of the line.
@@ -494,16 +498,18 @@ export class BotService {
                 9. Horizontal rule using ---.
                 10. Links using [title](URL).
                           
-                            
-                Make sure the entire response is formatted correctly according to the Markdown syntax and the specified formatting.
 
-                - Include the analysis for generating an image based on the query and the formatted answer.
-                
-                **Expected JSON formatted Output**
-                {{
-                  "answer": "markdown-formatted string",
-                  "shouldGenerateImage": "boolean"
-                }}                  
+- The final output must be a JSON object with exactly the following structure, without any extra commentary:
+
+**Expected JSON output**
+
+{{
+  "answer": "markdown-formatted string",
+  "shouldGenerateImage": "boolean"
+}}
+
+- Ensure that the output does not include any internal chain-of-thought details or analysis. Only the formatted answer and the boolean flag are to be returned.
+            
                 
                 `
 
