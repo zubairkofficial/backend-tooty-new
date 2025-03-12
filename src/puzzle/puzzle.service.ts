@@ -30,48 +30,68 @@ export class PuzzleService {
         try {
 
             const prompt = `
+            You are an AI assistant tasked with evaluating student submissions based **strictly** on the teacher's description. You will receive an image as a base64 encoded string, the teacher's instructions, and the total possible marks. Your output MUST be a JSON object.
 
-You are an AI assistant tasked with evaluating student submissions based on an image and a detailed teacher's description, using the Gemini Pro Vision model. You will receive an image as a base64 encoded string, the teacher's instructions, and the total possible marks. Your output MUST be a JSON object.
+            **Input Data (Available in the context - DO NOT TRY TO ACCESS EXTERNAL FILES):**
 
-**Input Data (Available in the context - DO NOT TRY TO ACCESS EXTERNAL FILES):**
+            * **Base64 Encoded Image Data:** The image data will be provided within the 'image_solved' and 'image_unsolved' field of the content array in the HumanMessage. You do *not* need to read from the file system. You already have the image data.
+            * **Teacher's Description:** <A clear and detailed description of the student's task, including the context of the image, what actions the student was expected to perform, specific criteria for evaluating the student's work (marks awarded or penalties applied), and any constraints or rules. Avoid ambiguity and ensure that all instructions are clear, measurable, and specific.>
+            * **Total Possible Marks:** <Integer representing the total marks for the assignment.>
 
-*   **Base64 Encoded Image Data:** The image data will be provided within the 'image_url' field of the content array in the HumanMessage. You do *not* need to read from the file system. You already have the image data.
-*   **Teacher's Description:** <A comprehensive textual description of the student's task, including: the context of the image, clear instructions on what the student was expected to do, the criteria for evaluating the student's response (how marks are awarded and penalties applied), any constraints or rules, and quantifiable elements whenever possible.>
-*   **Total Possible Marks:** <Integer representing the total marks for the assignment.>
+            **Your Task:**
 
-**Your Task:**
+            1. **Strictly Follow the Teacher's Description:** You must evaluate the student's submission based **strictly** on the teacher's description. Ignore any irrelevant elements or details not mentioned in the description. The evaluation must be done solely on the task and criteria provided by the teacher.
 
-1.  **Analyze the Image:** Use your image analysis capabilities to understand the contents of the image and how the student has modified it.
+            2. **Analyze the Image:** Use your image analysis capabilities to **understand** the content of the image as described by the teacher. Ensure that only those elements mentioned in the teacher's description are considered for evaluation.
 
-2.  **Understand the Task:** Carefully interpret the teacher's description to fully grasp what the student was supposed to do and how their work should be evaluated.
+            3. **Interpret the Teacher's Description:**
+               - Break down the task into **clear, measurable, and actionable steps** based on the teacher’s description.
+               - Follow each criterion exactly as described by the teacher. For example, if the task is to match banknotes with their corresponding values using lines, make sure the correct banknote is matched with the correct value.
+               - **Do not** deviate from these steps or assume anything not explicitly mentioned.
 
-3.  **Evaluate the Submission:** Compare the student's actions with the teacher's instructions. Assess whether the student followed all instructions and rules. Award and deduct marks according to the teacher's description.
+            4. **Evaluate the Submission:**
+               - **Compare the two images (image_unsolved and image_solved)**:
+                 - **Correctness of Matches**: If the task involves matching items by drawing lines (e.g., matching banknotes to their corresponding values), evaluate if the student has **correctly matched** the items.
+                   - If the student has **not drawn a line** between two items (e.g., a banknote and its value), **mark it as incorrect** and **deduct marks** for the unattempted task.
+                   - If the student **incorrectly matched** a banknote to the wrong value (or any item to the wrong corresponding match), **mark it as incorrect** and **deduct marks** for the incorrect match. Specify in the remarks what was incorrect.
+                   - **Unattempted Tasks**: If the student has **left any part of the puzzle unattempted** (e.g., a line not drawn between a note and its corresponding value), **deduct marks** and explain in the remarks section that this part of the task was not attempted.
+                 - **Partial Credit**: If the student **correctly matches some items** but not others, award partial marks. For example:
+                   - "The student correctly matched 3 out of 4 banknotes to their corresponding values."
+                   - "One incorrect match was made, and one banknote was left unconnected."
+               - Provide **clear, comprehensive feedback** in the \`remarks\` field, explaining **exactly** what the student did or did not do, how it was done, and how marks were awarded or deducted. Example:
+                 - "The student correctly matched two banknotes and their corresponding values. However, the third banknote was incorrectly matched with the wrong value, and the last banknote was left unconnected."
+                 - "The student did not attempt to draw a line for the second banknote."
+                 - "The task was completed with one incorrect match, one unattempted match, and two correct matches."
 
-4.  **Generate JSON Output:** Create a JSON object with the following structure:
-** Do NOT add \`\`\`json before json data and \`\`\` after json data, it must be just json data starts with \{ and ends with \}**
+            5. **Generate JSON Output:** Create a JSON object with the following structure:
+               **Do NOT add \`\`\`json before json data and \`\`\` after json data. It must be just JSON data starting with \{ and ending with \}.**
 
-{{
-  "obtained_marks": number,
-  "remarks": "string" 
-}}
+               {{
+                 "obtained_marks": number, 
+                 "remarks": "string"
+               }}
 
-obtained_marks: The integer value of the marks the student earned.
+            **Key Guidelines for Evaluation:**
 
-remarks: A concise and informative summary of the student's performance, including: what the student did, the number of correct/incorrect actions, specific feedback, how marks were awarded, and why the student failed (if applicable).
+            - **Strict Adherence to the Description:** The evaluation should be **strictly based on** the teacher’s description. Do **not** infer or assume any other details. If the description says "Match the banknotes with their corresponding values using lines," then that is what should be evaluated.
+            - **Measurable and Objective Evaluation:** Ensure that all evaluation criteria are **measurable** and **objective**. For matching items, check that each item is matched correctly using lines. For tasks like drawing lines, ensure that the lines connect the correct items as described.
+            - **Image Analysis:** Focus only on the elements described in the teacher’s description. If the task involves specific items, positions, or relationships (e.g., matching values with banknotes by drawing lines), **only** evaluate those elements and ensure that the student's actions align with the description.
+            - **Partial Credit for Incorrect or Incomplete Submissions:** If the student **did not attempt** a task (e.g., a line was missing between items), **deduct marks**. Similarly, if the student **incorrectly matched** items, **deduct marks** and explain what was wrong in the \`remarks\`.
+            - **Consistency in Marking:** Ensure consistency in awarding and deducting marks according to the clear, quantifiable criteria in the teacher's description. 
+              - Do **not** make subjective judgments based on other aspects of the image that were not mentioned in the description.
 
-Important Considerations:
+            **Error Handling:**
+            - If an error occurs, or if the data is unclear, return the following:
 
-Base64 Image Data: Image data is provided in base64. Do not try to access the file system.
+              {{
+                "obtained_marks": 0, 
+                "remarks": "Error: [Describe the error or missing elements]"
+              }}
+            - If the image is unreadable or the task is incomprehensible, return a relevant error message.
 
-Context is Key: All necessary data (teacher description, total marks, ground truth) will be provided within this prompt.
+            **Important:** You are evaluating strictly based on the teacher's description. **No assumptions** are allowed, and the evaluation should not consider anything not explicitly described in the task. If a task was not attempted or done incorrectly, **deduct marks** and explain why in the feedback.
+            `
 
-JSON Output ONLY: Your response must be a valid JSON object.
-
-Error Handling: If errors occur, return {{"obtained_marks": 0, "remarks": "Error: [Describe the error]"}}.
-
-Teacher's Description Importance: The teacher's description dictates the evaluation.
-
-`
             const visionModel = new ChatGoogleGenerativeAI({
                 model: "gemini-1.5-flash",
                 maxOutputTokens: 2048,
@@ -81,27 +101,36 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             if (!visionModel) {
                 throw new Error("Error connecting to Vision Model")
             }
-            const path = join(__dirname, '..', '..', 'images', `${fileName}`)
+            const path_answer = join(__dirname, '..', '..', 'images', `${fileName}`)
 
-            const image = fs.readFileSync(path).toString("base64");
-            if (!image) {
-                throw new Error("Error in getting image")
+            const image_answer = fs.readFileSync(path_answer).toString("base64");
+
+            const path_question = join(__dirname, '..', '..', 'images', `${puzzle.image_url}`)
+
+            const image_question = fs.readFileSync(path_question).toString("base64");
+
+            if (!image_answer || !image_question) {
+                throw new Error("Error in getting images")
             }
             const input = [
                 new HumanMessage({
                     content: [
-
                         {
                             type: "text",
-                            text: prompt + "\n\nTeacher's Description: " + puzzle.description + "\nTotal Possible Marks: " + puzzle.total_score,
+                            text: `${prompt}\n\nTeacher's Description: ${puzzle.description}\nTotal Possible Marks: ${puzzle.total_score}`,
                         },
                         {
                             type: "image_url",
-                            image_url: `data:image/png;base64,${image}`,
+                            image_url: `data:image/png;base64,${image_answer}`, // Solved image
+                        },
+                        {
+                            type: "image_url",
+                            image_url: `data:image/png;base64,${image_question}`, // Unsolved image
                         },
                     ],
                 }),
             ];
+
             const structre_llm = visionModel.withStructuredOutput(output)
             const res = await structre_llm.invoke(input);
 
@@ -126,6 +155,7 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
             }
 
             return res
+
         } catch (error) {
             console.log("error", error)
             throw new Error("Error Analysing image")
@@ -143,13 +173,26 @@ Teacher's Description Importance: The teacher's description dictates the evaluat
                 throw new Error("No puzzle assignment exist with given ID")
             }
 
-            await PuzzleAttempt.create({
-                puzzle_assignment_id: Number(puzzle_assignment_id),
-                bot_remarks: "",
-                obtained_marks: 0,
-                student_id: req.user.sub,
-                marked: false
+            const puzzle_attempte_exist = await PuzzleAttempt.findOne({
+                where: {
+                    puzzle_assignment_id: {
+                        [Op.eq]: Number(puzzle_assignment_id)
+                    },
+                    student_id: {
+                        [Op.eq]: req.user.sub
+                    }
+                }
             })
+
+            if (!puzzle_attempte_exist) {
+                await PuzzleAttempt.create({
+                    puzzle_assignment_id: Number(puzzle_assignment_id),
+                    bot_remarks: "",
+                    obtained_marks: 0,
+                    student_id: req.user.sub,
+                    marked: false
+                })
+            }
 
 
             return {
