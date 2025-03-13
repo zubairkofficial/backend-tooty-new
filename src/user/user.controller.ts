@@ -21,6 +21,7 @@ import {
   DeleteUserDto,
   GetUserDto,
   RefreshAccessToken,
+  StudentLoginDto,
   UserLoginDto,
   UserLogoutDto,
 } from './dto/user.dto';
@@ -160,6 +161,15 @@ export class UserController {
     return this.userService.login(userLoginDto);
   }
 
+  @Post('login-student')
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({ status: 200, description: 'User logged in successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async loginStudent(@Body() studentLoginDto: StudentLoginDto) {
+    return this.userService.loginStudent(studentLoginDto);
+  }
+
+
   @Post('logout')
   // @Roles(Role.USER, Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN, Role.PARENT)
   // @UseGuards(JwtAuthGuard, RolesGuard)
@@ -197,7 +207,7 @@ export class UserController {
   }
 
   @Put('update-profile')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER, Role.SUPER_ADMIN,Role.SUPER_INTENDENT)
+  @Roles(Role.ADMIN, Role.TEACHER, Role.SUPER_ADMIN, Role.USER, Role.SUPER_ADMIN, Role.SUPER_INTENDENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')// JWT Bearer authentication
   @ApiOperation({ summary: 'Update user details' })

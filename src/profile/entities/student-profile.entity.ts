@@ -16,7 +16,6 @@ import { User } from 'src/user/entities/user.entity';
 import { ParentProfile } from './parent-profile.entity';
 import { PuzzleAttempt } from 'src/puzzle/entity/puzzle-attempts.entity';
 
-
 @Table({
     tableName: 'student-profile',
     timestamps: true,
@@ -29,10 +28,10 @@ export class StudentProfile extends Model {
     })
     id: number;
 
-
     @Unique
     @Column({
         type: DataType.STRING,
+        allowNull: false
     })
     user_roll_no: string;
 

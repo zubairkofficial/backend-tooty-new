@@ -5,6 +5,7 @@ import {
   DeleteUserDto,
   GetUserDto,
   RefreshAccessToken,
+  StudentLoginDto,
   UserLoginDto,
   UserLogoutDto,
 } from './dto/user.dto';
@@ -469,8 +470,41 @@ export class UserService {
     console.log("create user dto", createUserDto)
 
     try {
+
+
+      //if role is student then we will do all validation using roll no --- else email
       // Check if email already exists
-      const existingUser = await User.findOne({ where: { email: createUserDto.email }, paranoid: false, transaction });
+      let existingUser = null
+
+      if (createUserDto.role === Role.USER) {
+        existingUser = await User.findOne({
+          include: [{
+            required: true,
+            model: StudentProfile,
+            where: {
+              user_roll_no: {
+                [Op.eq]: createUserDto.user_roll_no
+              }
+            }
+          }],
+          paranoid: false,
+          transaction
+        });
+      } else {
+        if (!createUserDto.email) {
+          throw new HttpException(`Email is required to create ${createUserDto.role}`, HttpStatus.BAD_REQUEST);
+        }
+        existingUser = await User.findOne({
+          where: {
+            email: {
+              [Op.eq]: createUserDto.email
+            }
+          },
+          paranoid: false,
+          transaction
+        });
+      }
+
       if (existingUser) {
         throw new HttpException('User with email already exists', HttpStatus.BAD_REQUEST);
       }
@@ -482,7 +516,7 @@ export class UserService {
       const user = await User.create(
         {
           name: createUserDto.name,
-          email: createUserDto.email,
+          email: createUserDto?.email,
           password: hashedPassword,
           contact: createUserDto.contact,
           role: createUserDto.role,
@@ -708,6 +742,7 @@ export class UserService {
     school_id: number | null;
     role: string
     district_id: number | null
+    user_roll_no: string | null
   }): Promise<string> {
     const refreshToken = SignRefreshToken(payload);
     try {
@@ -741,7 +776,7 @@ export class UserService {
       throw new Error('Token expired or invalid');
     }
 
-    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id || null, school_id: verifyToken?.school_id || null, district_id: verifyToken.district_id || null };
+    const payload = { sub: verifyToken?.sub, email: verifyToken.email, role: verifyToken?.role, level_id: verifyToken?.level_id || null, school_id: verifyToken?.school_id || null, district_id: verifyToken.district_id || null, user_roll_no: verifyToken?.user_roll_no || null };
 
     console.log("payload in refresh access token", payload)
     const accessToken = SignAccessToken(payload);
@@ -772,6 +807,70 @@ export class UserService {
     }
   }
 
+  async loginStudent(studentLoginDto: StudentLoginDto) {
+    try {
+      const { user_roll_no, password } = studentLoginDto;
+      this.logger.log(`student login creadentaila , ${studentLoginDto}`);
+      const user = await User.findOne({
+        include: [{
+          required: true,
+          model: StudentProfile,
+          where: {
+            user_roll_no: {
+              [Op.eq]: user_roll_no
+            }
+          }
+        }]
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('No User exist');
+      }
+
+      const subFncData = await this.loginSubFunction(user, password)
+
+      if (subFncData instanceof HttpException || subFncData instanceof UnauthorizedException || subFncData instanceof Error) {
+        throw new HttpException(
+          subFncData?.message || "Error user login",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      if (subFncData?.accessToken !== "" && subFncData?.refreshToken !== "") {
+        return {
+          message: 'Login successful.',
+          statusCode: 200,
+          data: {
+            accessToken: subFncData?.accessToken,
+            refreshToken: subFncData?.refreshToken,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              contact: user.contact,
+              user_image_url: user.user_image_url,
+              role: user.role,
+              user_roll_no: user.student_profile.user_roll_no
+
+            }
+          },
+        };
+      } else {
+        throw new HttpException("Error Login", HttpStatus.INTERNAL_SERVER_ERROR)
+      }
+
+
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+
+  }
+
   async login(userLoginDto: UserLoginDto) {
     try {
       const { email, password } = userLoginDto;
@@ -784,6 +883,51 @@ export class UserService {
         throw new UnauthorizedException('No User exist');
       }
 
+      const subFncData = await this.loginSubFunction(user, password)
+
+      if (subFncData instanceof HttpException || subFncData instanceof UnauthorizedException || subFncData instanceof Error) {
+        throw new HttpException(
+          subFncData?.message || "Error user login",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      if (subFncData?.accessToken !== "" && subFncData?.refreshToken !== "") {
+        return {
+          message: 'Login successful.',
+          statusCode: 200,
+          data: {
+            accessToken: subFncData?.accessToken,
+            refreshToken: subFncData?.refreshToken,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              contact: user.contact,
+              user_image_url: user.user_image_url,
+              role: user.role,
+              user_roll_no: null
+            }
+          },
+        };
+      } else {
+        throw new HttpException("Error Login", HttpStatus.INTERNAL_SERVER_ERROR)
+      }
+
+
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+
+  }
+
+  async loginSubFunction(user: User, loginPassword: string) {
+    try {
       let profile: any;
       if (user.role == Role.USER) {
         profile = await StudentProfile.findOne({
@@ -845,7 +989,7 @@ export class UserService {
       }
 
       // Validate password
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(loginPassword, user.password);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid credentials');
       }
@@ -861,7 +1005,7 @@ export class UserService {
       let refreshToken = ""
       console.log("profile", profile)
 
-      const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id || null, school_id: profile?.school_id || null, district_id: profile?.district_id || null };
+      const payload = { sub: user.id, email: user.email, role: user?.role, level_id: profile?.level_id || null, school_id: profile?.school_id || null, district_id: profile?.district_id || null, user_roll_no: profile?.user_roll_no || null };
 
       if (refresh_token_exist) {
         refreshToken = refresh_token_exist?.refresh_token
@@ -872,43 +1016,27 @@ export class UserService {
       }
 
       if (refreshToken === '') {
-        throw new Error('Fialed to LogIn');
+        throw new HttpException('Fialed to LogIn - refreshtoken error', HttpStatus.INTERNAL_SERVER_ERROR);
       }
       const accessToken = SignAccessToken(payload);
+
+      if (!accessToken) {
+        throw new HttpException('Fialed to LogIn - accessToken error', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
 
       this.logger.log(
         `jwt access token ${accessToken} \n jwt refresh token ${refreshToken}`,
       );
 
-      delete user.password;
       return {
-        message: 'Login successful.',
-        statusCode: 200,
-        data: {
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            contact: user.contact,
-            user_image_url: user.user_image_url,
-            role: user.role
-
-          }
-        },
-      };
-
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      } else {
-        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        accessToken,
+        refreshToken
       }
+    } catch (error) {
+      return error
     }
 
   }
-
 
   async getAllUsersByRole(role: Role, req: any, page?: number, limit?: number) {
     try {

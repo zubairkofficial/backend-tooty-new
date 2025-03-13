@@ -5,7 +5,7 @@ import { Role } from 'src/utils/roles.enum';
 
 export class CreateUserByAdminDto {
   @ApiProperty({ example: 'John Doe' }) @IsString() @IsNotEmpty() name: string;
-  @ApiProperty({ example: 'john.doe@example.com' }) @IsEmail() @IsNotEmpty() email: string;
+  @ApiProperty({ example: 'john.doe@example.com' }) @IsOptional() @IsEmail() email: string;
   @ApiProperty({ example: 'password123' }) @IsString() @IsNotEmpty() password: string;
   @ApiProperty({ example: '+1234567890' }) @IsString() @IsNotEmpty() contact: string;
   @ApiProperty({ example: Role.ADMIN, enum: Role }) @IsString() @IsNotEmpty() role: Role;
@@ -73,6 +73,17 @@ export class UpdateUserDto extends PartialType(BaseUserDto) {
 
 
 // User Login DTO
+export class StudentLoginDto {
+  @ApiProperty({ description: 'Email address of the user', example: 'john.doe@example.com' })
+  @IsString()
+  @IsNotEmpty({ message: 'user roll no must be empty' })
+  user_roll_no: string;
+
+  @ApiProperty({ description: 'Password for the user account', example: 'userpassword123' })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
 export class UserLoginDto {
   @ApiProperty({ description: 'Email address of the user', example: 'john.doe@example.com' })
   @IsEmail()
