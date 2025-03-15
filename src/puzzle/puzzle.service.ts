@@ -13,6 +13,8 @@ import { Subject } from 'src/subject/entity/subject.entity';
 import { Level } from 'src/level/entity/level.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { PuzzleAssignment } from './entity/puzzle-assignment.entity';
+import { Role } from 'src/utils/roles.enum';
+import { User } from 'src/user/entities/user.entity';
 
 const output = z.object({
     remarks: z.string(),
@@ -25,7 +27,7 @@ export class PuzzleService {
         private readonly sequelize: Sequelize
     ) { }
 
-    async puzzleMarking(fileName: string, submit_puzzle_id: number, puzzle: Puzzle) {
+    async puzzleMarking(puzzle_submission: PuzzleAttempt, puzzle: Puzzle) {
 
         try {
 
@@ -101,15 +103,12 @@ export class PuzzleService {
             if (!visionModel) {
                 throw new Error("Error connecting to Vision Model")
             }
-            const path_answer = join(__dirname, '..', '..', 'images', `${fileName}`)
+            const path_answer = join(__dirname, '..', '..', 'images', `${puzzle_submission.image_url}`)
 
             const image_answer = fs.readFileSync(path_answer).toString("base64");
 
-            const path_question = join(__dirname, '..', '..', 'images', `${puzzle.image_url}`)
 
-            const image_question = fs.readFileSync(path_question).toString("base64");
-
-            if (!image_answer || !image_question) {
+            if (!image_answer) {
                 throw new Error("Error in getting images")
             }
             const input = [
@@ -122,11 +121,7 @@ export class PuzzleService {
                         {
                             type: "image_url",
                             image_url: `data:image/png;base64,${image_answer}`, // Solved image
-                        },
-                        {
-                            type: "image_url",
-                            image_url: `data:image/png;base64,${image_question}`, // Unsolved image
-                        },
+                        }
                     ],
                 }),
             ];
@@ -141,12 +136,12 @@ export class PuzzleService {
                     marked: true,
                     obtained_score: Number(res.obtained_marks),
                     bot_remarks: res.remarks,
-                    image_url: fileName
+                    
 
                 }, {
                     where: {
                         id: {
-                            [Op.eq]: submit_puzzle_id
+                            [Op.eq]: puzzle_submission.id
                         }
                     }
                 })
@@ -235,10 +230,14 @@ export class PuzzleService {
             if (puzzle_submission.marked) {
                 throw new Error("puzzle already marked")
             }
+            if (puzzle_submission) {
+                puzzle_submission.image_url = file.filename
+                await puzzle_submission.save()
+            }
 
             if (!puzzle_submission) {
                 puzzle_submission = await PuzzleAttempt.create({
-                    image_url: file.filename,
+                    image_url: `${file.filename}`,
                     puzzle_assignment_id: Number(puzzle_assignment_id),
                     bot_remarks: "",
                     obtained_marks: 0,
@@ -247,7 +246,8 @@ export class PuzzleService {
                 })
             }
 
-            const res = await this.puzzleMarking(file.filename, puzzle_submission.id, puzzle.puzzle)
+
+            const res = await this.puzzleMarking(puzzle_submission, puzzle.puzzle)
             if (res) {
                 return {
                     statusCode: 200,
@@ -269,30 +269,34 @@ export class PuzzleService {
         }
     }
 
-    async update(updatePuzzleDto: UpdatePuzzleDto) {
+    async update(updatePuzzleDto: UpdatePuzzleDto, req: any) {
         const { id, level_id, subject_id, description, total_score } = updatePuzzleDto
         try {
 
 
 
-            const puzzle = await Puzzle.findByPk(id)
+            const puzzle = await Puzzle.findOne({
+                where: {
+                    id: {
+                        [Op.eq]: id
+                    },
+                    created_by: {
+                        [Op.eq]: req.user.sub
+                    }
+                }
+            })
 
             if (!puzzle) {
                 throw new HttpException("No puzzle found with this ID", HttpStatus.BAD_REQUEST)
             }
 
-            puzzle.level_id = level_id;
-
+            if (req.user.role === Role.SUPER_ADMIN) {
+                puzzle.level_id = level_id;
+            }
 
             puzzle.subject_id = subject_id;
-
-
-
             puzzle.description = description
-
-
             puzzle.total_score = total_score
-
 
             await puzzle.save()
 
@@ -306,22 +310,33 @@ export class PuzzleService {
         }
     }
 
-    async create(file: Express.Multer.File, createPuzzleDto: CreatePuzzleDto) {
+    async create(file: Express.Multer.File, createPuzzleDto: CreatePuzzleDto, req: any) {
         const transaction = await this.sequelize.transaction()
         try {
-            await Puzzle.create({
-                image_url: `${file?.filename}`,
-                level_id: Number(createPuzzleDto.level_id),
+            const puzzle = await Puzzle.create({
+                image_url: file ? `${file?.filename}` : null,
+                level_id: req.user.role === Role.SUPER_ADMIN ? Number(createPuzzleDto.level_id) : req.user.level_id,
                 subject_id: Number(createPuzzleDto.subject_id),
                 description: createPuzzleDto.description,
-                total_score: Number(createPuzzleDto.total_score)
+                total_score: Number(createPuzzleDto.total_score),
+                created_by: req.user.sub
             }, {
                 transaction
             })
+
+            if (req.user.role === Role.TEACHER) {
+                await PuzzleAssignment.create({
+                    teacher_id: req.user.sub,
+                    puzzle_id: puzzle.id
+                }, {
+                    transaction
+                })
+            }
+
             await transaction.commit()
             return {
                 statusCode: 200,
-                message: "puzzle created successfully"
+                message: `puzzle created ${req.user.role === Role.TEACHER && 'and Assigned successfully'}`
             }
         } catch (error) {
             await transaction.rollback()
@@ -329,27 +344,42 @@ export class PuzzleService {
         }
     }
 
-    async delete(deletePuzzleDto: DeletePuzzleDto) {
+    async delete(deletePuzzleDto: DeletePuzzleDto, req: any) {
 
         try {
-            const puzzle = await Puzzle.findByPk(deletePuzzleDto.puzzle_id)
+            const puzzle = await Puzzle.findOne({
+                where: {
+                    id: {
+                        [Op.eq]: deletePuzzleDto.puzzle_id
+                    },
+                    created_by: {
+                        [Op.eq]: req.user.sub
+                    }
+                }
+
+            })
             if (!puzzle) {
                 throw new Error("puzzle with ID do not exist")
             }
+            if (puzzle?.image_url) {
+                const path = join(__dirname, '..', '..', 'images', `${puzzle.image_url}`);
 
-            const path = join(__dirname, '..', '..', 'images', `${puzzle.image_url}`);
+                fs.unlink(path, (err) => {
+                    if (err) {
+                        throw new Error("unable to delete puzzle" + err.message)
+                        return
+                    }
+                })
+            }
 
-            fs.unlink(path, (err) => {
-                if (err) {
-                    throw new Error("unable to delete puzzle" + err.message)
-                    return
-                }
-            })
 
             await Puzzle.destroy({
                 where: {
                     id: {
                         [Op.eq]: deletePuzzleDto.puzzle_id
+                    },
+                    created_by: {
+                        [Op.eq]: req.user.sub
                     }
                 }
             })
@@ -364,9 +394,17 @@ export class PuzzleService {
     }
 
 
-    async getByID(puzzle_id: string) {
+    async getByID(puzzle_id: string, req: any) {
         try {
-            const puzzle = await Puzzle.findByPk(puzzle_id, {
+            const puzzle = await Puzzle.findOne({
+                where: {
+                    id: {
+                        [Op.eq]: Number(puzzle_id)
+                    },
+                    created_by: {
+                        [Op.eq]: req.user.sub
+                    }
+                },
                 include: [{
                     model: Subject
                 }, {
@@ -412,7 +450,7 @@ export class PuzzleService {
                 where: {
                     puzzle_assignment_id: {
                         [Op.eq]: deletePuzzleAssignmnet.puzzle_assignment_id
-                    }
+                    },
                 }
             })
 
@@ -424,6 +462,9 @@ export class PuzzleService {
                 where: {
                     id: {
                         [Op.eq]: deletePuzzleAssignmnet.puzzle_assignment_id
+                    },
+                    teacher_id: {
+                        [Op.eq]: req.user.sub
                     }
                 }
             })
@@ -507,6 +548,9 @@ export class PuzzleService {
                     },
                     subject_id: {
                         [Op.in]: teacher.subjects.map(subject => subject.id)
+                    },
+                    created_by: {
+                        [Op.ne]: req.user.sub
                     }
                 },
                 limit,   // Number of records to fetch
@@ -572,13 +616,18 @@ export class PuzzleService {
 
 
 
-    async getAll(page: number = 1, limit: number = 10) {
+    async getAll(page: number = 1, limit: number = 10, req: any) {
         try {
 
             const offset = (page - 1) * limit;
 
 
             const { rows: puzzles, count: total } = await Puzzle.findAndCountAll({
+                where: {
+                    created_by: {
+                        [Op.eq]: req.user.sub
+                    }
+                },
                 limit,
                 offset,
                 order: [['createdAt', 'DESC']],

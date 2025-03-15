@@ -16,6 +16,7 @@ export class CreatePuzzleDto {
     @IsNotEmpty()
     subject_id: string
 
+    @IsOptional()
     @IsString()
     @IsNotEmpty()
     level_id: string

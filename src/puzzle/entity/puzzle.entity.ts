@@ -3,6 +3,7 @@ import { Level } from "src/level/entity/level.entity";
 import { Subject } from "src/subject/entity/subject.entity";
 import { PuzzleAttempt } from "./puzzle-attempts.entity";
 import { PuzzleAssignment } from "./puzzle-assignment.entity";
+import { User } from "src/user/entities/user.entity";
 
 
 @Table({
@@ -21,7 +22,7 @@ export class Puzzle extends Model {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     image_url: string;
 
@@ -58,8 +59,19 @@ export class Puzzle extends Model {
     @BelongsTo(() => Level)
     level!: Level;
 
-    @HasMany(() => PuzzleAssignment,{ onDelete: "CASCADE" })
+
+    @ForeignKey(() => User)
+    @Column({
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    created_by: number;
+
+    @BelongsTo(() => User)
+    creator!: User;
+
+    @HasMany(() => PuzzleAssignment, { onDelete: "CASCADE" })
     puzzle_assignments!: PuzzleAssignment[]
-    
+
 
 }
