@@ -1,4 +1,5 @@
 import {
+    BeforeUpdate,
     BelongsTo,
     BelongsToMany,
     Column,
@@ -87,4 +88,15 @@ export class Bot extends Model {
 
     @HasMany(() => Chat, { onDelete: 'CASCADE' })
     chats!: Chat[]
+
+    @BeforeUpdate
+    static async removeBotContextOnLevelORSubjectChange(instance: Bot) {
+        if (instance.changed("level_id") || instance.changed("subject_id")) {
+            await Join_BotContextData.destroy({
+                where: {
+                    bot_id: instance.id
+                }
+            })
+        }
+    }
 }

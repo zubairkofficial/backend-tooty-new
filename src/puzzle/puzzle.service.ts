@@ -577,10 +577,13 @@ export class PuzzleService {
         }
     }
 
-
     async getByLevel(req: any, page: number = 1, limit: number = 10) {
         try {
-            const puzzles = await PuzzleAssignment.findAll({
+            // Calculate the offset for pagination
+            const offset = (page - 1) * limit;
+    
+            // Use findAndCountAll to get both the data and the total count
+            const { rows: puzzles, count: total } = await PuzzleAssignment.findAndCountAll({
                 include: [{
                     required: true,
                     model: Puzzle,
@@ -601,18 +604,30 @@ export class PuzzleService {
                             [Op.eq]: req.user.sub
                         }
                     }
-                }]
-            })
-
+                }],
+                limit, // Set the limit per page
+                offset, // Set the offset for pagination
+                order: [['createdAt', 'DESC']] // Optional: To order by creation date
+            });
+    
+            // Calculate total number of pages
+            const totalPages = Math.ceil(total / limit);
+    
             return {
                 statusCode: 200,
-                data: puzzles
-            }
+                data: puzzles,
+                total,
+                page,
+                totalPages
+            };
         } catch (error) {
-            throw new HttpException(error.message || 'Failed to find Puzzle with this ID', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException(
+                error.message || 'Failed to find puzzles with this level',
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
-
+    
 
 
 

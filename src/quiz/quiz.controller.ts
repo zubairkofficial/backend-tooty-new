@@ -1,5 +1,5 @@
 // src/controllers/Quiz.controller.ts
-import { Controller, Get, Post, Body, Param, NotFoundException, UseGuards, Req, Put, Delete, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException, UseGuards, Req, Put, Delete, Patch, Query } from '@nestjs/common';
 import { CreateQuizDto, EditQuizDto } from './dto/create-quiz.dto';
 import { Quiz } from './entities/quiz.entity';
 import { QuizService } from './quiz.service';
@@ -16,7 +16,7 @@ export class QuizController {
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async create(@Body() createQuizDto: CreateQuizDto, @Req() req: any) {
-    return  this.quizService.create(createQuizDto, req);
+    return this.quizService.create(createQuizDto, req);
   }
 
 
@@ -44,17 +44,22 @@ export class QuizController {
   @Get()
   @Roles(Role.TEACHER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async findAll(@Req() req: any){
-    return this.quizService.findAll(req);
+  async findAll(@Req() req: any, 
+  @Query('page') page?: number,
+  @Query('limit') limit?: number) {
+    return this.quizService.findAll(req, page, limit);
   }
 
 
   @Get('/get-quiz-by-level')
   @Roles(Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async findAllQuizByLevel(@Req() req: any) {
-    return this.quizService.findAllQuizByLevel(req);
+  async findAllQuizByLevel(@Req() req: any,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number) {
+    return this.quizService.findAllQuizByLevel(req, page, limit);
   }
+
   @Get(':id')
   @Roles(Role.TEACHER, Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)

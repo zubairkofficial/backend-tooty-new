@@ -285,12 +285,15 @@ export class QuizService {
   }
 
 
-  async findAllQuizByLevel(req: any) {
+  async findAllQuizByLevel(req: any, page: number = 1, limit: number = 10) {
     try {
       if (req.user.level_id == null) {
-        throw new Error("Level is not assigned to user")
+        throw new Error("Level is not assigned to user");
       }
-      const data = await Quiz.findAll({
+  
+      const offset = (page - 1) * limit;
+  
+      const { rows: data, count: total } = await Quiz.findAndCountAll({
         include: [
           {
             required: true,
@@ -306,37 +309,47 @@ export class QuizService {
               school_id: {
                 [Op.eq]: req.user.school_id
               }
-
             }
           },
           {
             model: QuizAttempt,
-            required: false, // This allows for quizzes without attempts to be included
+            required: false, 
             where: {
               student_id: {
                 [Op.eq]: req.user.sub
-              },
+              }
             }
           }
         ],
         order: [
           ["id", "DESC"]
         ],
-
+        limit, 
+        offset 
       });
-
+  
+      const totalPages = Math.ceil(total / limit);
+  
       return {
         statusCode: 200,
-        data
-      }
+        data,
+        total,
+        page,
+        totalPages
+      };
     } catch (error) {
-      throw new HttpException(error.message || 'Failed to fetch quizzes by level', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        error.message || 'Failed to fetch quizzes by level',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
-  async findAll(req: any) {
+  async findAll(req: any, page: number = 1, limit: number = 10) {
     try {
-      const data = await this.quizModel.findAll({
+      const offset = (page - 1) * limit;
+  
+      const { rows: data, count: total } = await this.quizModel.findAndCountAll({
         include: [
           { model: Level, attributes: ['id', 'level'] },
           { model: Subject, attributes: ['id', 'title'] },
@@ -352,18 +365,27 @@ export class QuizService {
             [Op.eq]: req.user.sub
           }
         },
-
+        limit, 
+        offset 
       });
-
+  
+      const totalPages = Math.ceil(total / limit);
+  
       return {
         statusCode: 200,
-        data
-      }
+        data,
+        total,
+        page,
+        totalPages
+      };
     } catch (error) {
-      throw new HttpException(error.message || 'Failed to fetch quizzes', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        error.message || 'Failed to fetch quizzes',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
-
+  
   async deleteQuiz(id: number) {
     try {
       const quiz = await this.quizModel.destroy({

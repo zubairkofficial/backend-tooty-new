@@ -121,8 +121,9 @@ export class PuzzleController {
     @Get('/get-by-level')
     @Roles(Role.USER)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    async getByLevel(@Req() req: any) {
-        return this.puzzleService.getByLevel(req);
+    async getByLevel(@Req() req: any, @Query('page') page?: number,
+        @Query('limit') limit?: number,) {
+        return this.puzzleService.getByLevel(req, page, limit);
     }
 
     //get by id puzzle

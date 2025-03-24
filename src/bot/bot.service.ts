@@ -616,25 +616,31 @@ export class BotService {
 
 
     async updateBot(updateBotDto: UpdateBotDto, req: any) {
+        const transaction = await this.sequelize.transaction()
         try {
-
-            await Bot.update({
-                name: updateBotDto.name,
-                description: updateBotDto.description,
-                ai_model: updateBotDto.ai_model,
-                level_id: updateBotDto.level_id,
-                user_id: req.user.sub,
-                subject_id: updateBotDto.subject_id,
-                display_name: updateBotDto.display_name,
-                first_message: updateBotDto.first_message,
-                voice_model: updateBotDto.voice_model
-            }, {
+            const bot = await Bot.findOne({
                 where: {
                     id: {
                         [Op.eq]: updateBotDto.id
                     }
                 }
             })
+
+            if (!bot) {
+                throw new Error("Bot with this id does not exist")
+
+            }
+
+            bot.name = updateBotDto.name
+            bot.description = updateBotDto.description
+            bot.ai_model = updateBotDto.ai_model
+            bot.level_id = updateBotDto.level_id
+            bot.subject_id = updateBotDto.subject_id
+            bot.display_name = updateBotDto.display_name
+            bot.first_message = updateBotDto.first_message
+            bot.voice_model = updateBotDto.voice_model
+
+            await bot.save()
 
             return {
                 statusCode: 200,
