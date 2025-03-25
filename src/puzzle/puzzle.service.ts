@@ -15,6 +15,7 @@ import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { PuzzleAssignment } from './entity/puzzle-assignment.entity';
 import { Role } from 'src/utils/roles.enum';
 import { User } from 'src/user/entities/user.entity';
+import { Notification } from 'src/notification/entity/notification.entity';
 
 const output = z.object({
     remarks: z.string(),
@@ -136,7 +137,7 @@ export class PuzzleService {
                     marked: true,
                     obtained_score: Number(res.obtained_marks),
                     bot_remarks: res.remarks,
-                    
+
 
                 }, {
                     where: {
@@ -323,11 +324,27 @@ export class PuzzleService {
             }, {
                 transaction
             })
-
+            if (req.user.role === Role.SUPER_ADMIN) {
+                await Notification.create({
+                    title: "Puzzle: New Puzzle Created! Check in the Puzzle Section",
+                    level_id: createPuzzleDto.level_id,
+                    school_id: null
+                }, {
+                    transaction
+                })
+            }
             if (req.user.role === Role.TEACHER) {
                 await PuzzleAssignment.create({
                     teacher_id: req.user.sub,
                     puzzle_id: puzzle.id
+                }, {
+                    transaction
+                })
+
+                await Notification.create({
+                    title: "Puzzle: New Puzzle Assigned! Check in the Puzzle Section",
+                    level_id: req.user.level_id,
+                    school_id: req.user.school_id
                 }, {
                     transaction
                 })
@@ -477,17 +494,33 @@ export class PuzzleService {
         }
     }
     async createPuzzleAssignment(createPuzzleAssignment: CreatePuzzleAssignmnet, req: any) {
+        const transaction = await this.sequelize.transaction()
         try {
 
-            const puzzles = await PuzzleAssignment.create({
+            await PuzzleAssignment.create({
                 teacher_id: req.user.sub,
                 puzzle_id: createPuzzleAssignment.puzzle_id
+            }, {
+                transaction
             })
+
+
+            await Notification.create({
+                title: "Puzzle: New Puzzle Assigned! Check in the Puzzle Section",
+                level_id: req.user.level_id,
+                school_id: req.user.school_id
+            }, {
+                transaction
+            })
+
+            await transaction.commit()
+
             return {
                 statusCode: 200,
                 message: "Puzzle Assignment created successfully"
             }
         } catch (error) {
+            await transaction.rollback()
             throw new HttpException(error.message || 'Failed to create puzzle assignment', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -581,7 +614,7 @@ export class PuzzleService {
         try {
             // Calculate the offset for pagination
             const offset = (page - 1) * limit;
-    
+
             // Use findAndCountAll to get both the data and the total count
             const { rows: puzzles, count: total } = await PuzzleAssignment.findAndCountAll({
                 include: [{
@@ -609,10 +642,10 @@ export class PuzzleService {
                 offset, // Set the offset for pagination
                 order: [['createdAt', 'DESC']] // Optional: To order by creation date
             });
-    
+
             // Calculate total number of pages
             const totalPages = Math.ceil(total / limit);
-    
+
             return {
                 statusCode: 200,
                 data: puzzles,
@@ -627,7 +660,7 @@ export class PuzzleService {
             );
         }
     }
-    
+
 
 
 

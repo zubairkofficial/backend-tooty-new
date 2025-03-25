@@ -5,6 +5,7 @@ import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { ParentProfile } from 'src/profile/entities/parent-profile.entity';
 import { JoinSchoolAdmin } from './join-school-admin.entity';
 import { SuperIntendentProfile } from 'src/profile/entities/super-intendent-profile.entity';
+import { Notification } from 'src/notification/entity/notification.entity';
 
 @Table({
   tableName: 'schools',
@@ -53,4 +54,7 @@ export class School extends Model {
 
   @BelongsTo(() => SuperIntendentProfile)
   creator!: SuperIntendentProfile
+
+  @HasMany(() => Notification)
+  notifications!: Notification[]
 }

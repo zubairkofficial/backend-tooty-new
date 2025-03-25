@@ -51,6 +51,8 @@ import { PuzzleModule } from './puzzle/puzzle.module';
 import { Puzzle } from './puzzle/entity/puzzle.entity';
 import { PuzzleAttempt } from './puzzle/entity/puzzle-attempts.entity';
 import { PuzzleAssignment } from './puzzle/entity/puzzle-assignment.entity';
+import { NotificationModule } from './notification/notification.module';
+import { Notification } from './notification/entity/notification.entity';
 
 @Module({
   imports: [
@@ -69,7 +71,7 @@ import { PuzzleAssignment } from './puzzle/entity/puzzle-assignment.entity';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadModels: true,
-      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile, AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School, JoinSchoolAdmin, District, SuperIntendentProfile, Puzzle, PuzzleAttempt, PuzzleAssignment],
+      models: [User, Otp, RefreshToken, Bot, Join_BotContextData, File, Chat, StudentProfile, TeacherProfile, ParentProfile, AdminProfile, SuperAdminProfile, JoinTeacherSubjectLevel, Level, Subject, Quiz, QuizAttempt, Question, Option, Answer, School, JoinSchoolAdmin, District, SuperIntendentProfile, Puzzle, PuzzleAttempt, PuzzleAssignment, Notification],
       synchronize: process.env.DB_SYNCHRONIZE == 'true' ? true : false,
       logging: true,
 
@@ -106,6 +108,7 @@ import { PuzzleAssignment } from './puzzle/entity/puzzle-assignment.entity';
     DistrictModule,
     AssignmentModule,
     PuzzleModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

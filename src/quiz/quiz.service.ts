@@ -13,6 +13,7 @@ import { Sequelize } from 'sequelize-typescript'
 import { Role } from 'src/utils/roles.enum';
 import { QuizAttempt } from 'src/quiz-attempt/entities/quiz-attempt.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
+import { Notification } from 'src/notification/entity/notification.entity';
 
 @Injectable()
 export class QuizService {
@@ -31,6 +32,7 @@ export class QuizService {
   ) { }
 
   async create(createQuizDto: CreateQuizDto, req: any) {
+    const transaction = await this.sequelize.transaction()
     try {
       const { title, description, quiz_type, start_time, end_time, duration, subject_id, questions } = createQuizDto;
 
@@ -58,12 +60,16 @@ export class QuizService {
       }
 
       // Check if level and subject exist
-      const level = await this.levelModel.findByPk(req.user.level_id);
+      const level = await this.levelModel.findByPk(req.user.level_id, {
+        transaction
+      });
       if (!level) {
         throw new NotFoundException(`Level with ID ${req.user.level_id} not found`);
       }
 
-      const subject = await this.subjectModel.findByPk(subject_id);
+      const subject = await this.subjectModel.findByPk(subject_id, {
+        transaction
+      });
       if (!subject) {
         throw new NotFoundException(`Subject with ID ${subject_id} not found`);
       }
@@ -82,6 +88,8 @@ export class QuizService {
         level_id: req.user.level_id,
         subject_id,
         teacher_id: req.user.sub,
+      }, {
+        transaction
       });
 
       // Add questions and options
@@ -92,6 +100,8 @@ export class QuizService {
           question_type: questionDto.questionType === "multiple-choice" ? QuizType.MCQS : QuizType.QA,
           quiz_id: quiz.id,
           score: questionDto.score, // Add the score for the question
+        }, {
+          transaction
         });
 
         totalScore += questionDto.score;
@@ -104,6 +114,8 @@ export class QuizService {
               text: optionDto.text,
               is_correct: optionDto.isCorrect,
               question_id: question.id,
+            }, {
+              transaction
             });
           }
         }
@@ -111,13 +123,25 @@ export class QuizService {
 
       // Update quiz total score
       quiz.total_score = totalScore;
-      await quiz.save();
+      await quiz.save({ transaction });
+
+
+      await Notification.create({
+        title: "Quiz: New Quiz Assigned! Check in the Quiz Section",
+        level_id: req.user.level_id,
+        school_id: req.user.school_id
+      }, {
+        transaction
+      })
+
+      await transaction.commit()
 
       return {
         statusCode: 200,
         message: "Quiz created successfully"
       }
     } catch (error) {
+      await transaction.rollback()
       throw new HttpException(error.message || 'Failed to create quiz', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -290,9 +314,9 @@ export class QuizService {
       if (req.user.level_id == null) {
         throw new Error("Level is not assigned to user");
       }
-  
+
       const offset = (page - 1) * limit;
-  
+
       const { rows: data, count: total } = await Quiz.findAndCountAll({
         include: [
           {
@@ -313,7 +337,7 @@ export class QuizService {
           },
           {
             model: QuizAttempt,
-            required: false, 
+            required: false,
             where: {
               student_id: {
                 [Op.eq]: req.user.sub
@@ -324,12 +348,12 @@ export class QuizService {
         order: [
           ["id", "DESC"]
         ],
-        limit, 
-        offset 
+        limit,
+        offset
       });
-  
+
       const totalPages = Math.ceil(total / limit);
-  
+
       return {
         statusCode: 200,
         data,
@@ -348,7 +372,7 @@ export class QuizService {
   async findAll(req: any, page: number = 1, limit: number = 10) {
     try {
       const offset = (page - 1) * limit;
-  
+
       const { rows: data, count: total } = await this.quizModel.findAndCountAll({
         include: [
           { model: Level, attributes: ['id', 'level'] },
@@ -365,12 +389,12 @@ export class QuizService {
             [Op.eq]: req.user.sub
           }
         },
-        limit, 
-        offset 
+        limit,
+        offset
       });
-  
+
       const totalPages = Math.ceil(total / limit);
-  
+
       return {
         statusCode: 200,
         data,
@@ -385,7 +409,7 @@ export class QuizService {
       );
     }
   }
-  
+
   async deleteQuiz(id: number) {
     try {
       const quiz = await this.quizModel.destroy({

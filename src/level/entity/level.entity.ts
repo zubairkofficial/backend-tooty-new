@@ -8,6 +8,7 @@ import {
     Unique,
 } from 'sequelize-typescript';
 import { Bot } from 'src/bot/entities/bot.entity';
+import { Notification } from 'src/notification/entity/notification.entity';
 import { StudentProfile } from 'src/profile/entities/student-profile.entity';
 import { TeacherProfile } from 'src/profile/entities/teacher-profile.entity';
 import { Puzzle } from 'src/puzzle/entity/puzzle.entity';
@@ -54,5 +55,8 @@ export class Level extends Model {
 
     @HasMany(() => Puzzle)
     puzzles!: Puzzle[]
+
+    @HasMany(() => Notification)
+    notifications!: Notification[]
 
 }
