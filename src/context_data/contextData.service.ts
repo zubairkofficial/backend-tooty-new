@@ -226,7 +226,7 @@ export class ContextDataService {
             // Send email
             await transporter.sendMail({
                 from: `${process.env.EMAIL_FROM_ADDRESS}`,
-                to: "engrmuqeetahmad@gmail.com", // Use the provided email
+                to: "noreply@tooty.ai", // Use the provided email
                 subject: 'Your Open AI API key at Tooty',
                 text: `This is auto generated Email, There is a problem with OpenAI API key 
                 \n

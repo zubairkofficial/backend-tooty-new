@@ -127,7 +127,7 @@ export class QuizService {
 
 
       await Notification.create({
-        title: "Quiz: New Quiz Assigned! Check in the Quiz Section",
+        title: `Quiz: ${quiz.title}`,
         level_id: req.user.level_id,
         school_id: req.user.school_id
       }, {

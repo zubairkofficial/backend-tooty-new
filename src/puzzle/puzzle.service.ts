@@ -326,7 +326,7 @@ export class PuzzleService {
             })
             if (req.user.role === Role.SUPER_ADMIN) {
                 await Notification.create({
-                    title: "Puzzle: New Puzzle Created! Check in the Puzzle Section",
+                    title: "Puzzle: New Puzzle Created!",
                     level_id: createPuzzleDto.level_id,
                     school_id: null
                 }, {
@@ -496,6 +496,10 @@ export class PuzzleService {
     async createPuzzleAssignment(createPuzzleAssignment: CreatePuzzleAssignmnet, req: any) {
         const transaction = await this.sequelize.transaction()
         try {
+            const puzzle = await Puzzle.findByPk(createPuzzleAssignment.puzzle_id)
+            if (!puzzle) {
+                throw new HttpException("Not Puzzle found with ID", HttpStatus.BAD_REQUEST)
+            }
 
             await PuzzleAssignment.create({
                 teacher_id: req.user.sub,
@@ -506,7 +510,7 @@ export class PuzzleService {
 
 
             await Notification.create({
-                title: "Puzzle: New Puzzle Assigned! Check in the Puzzle Section",
+                title: `Puzzle: ${puzzle.description.slice(0, 20)}`,
                 level_id: req.user.level_id,
                 school_id: req.user.school_id
             }, {
