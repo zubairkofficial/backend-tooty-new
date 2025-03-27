@@ -40,11 +40,15 @@ export class QuizAttemptService {
   ) { }
 
 
-  async getQuizAttemptsByStudent(req: any) {
+  async getQuizAttemptsByStudent(req: any, page: number, limit: number) {
 
     try {
 
-      const data = await QuizAttempt.findAll({
+      const offset = (page - 1) * limit
+
+
+
+      const { rows: data, count: total } = await QuizAttempt.findAndCountAll({
         where: {
           student_id: {
             [Op.eq]: req.user.sub
@@ -61,13 +65,18 @@ export class QuizAttemptService {
             as: 'quiz',
           },
         ],
-
+        limit,
+        offset
 
       });
 
+      const totalPages = Math.ceil(total / limit);
       return {
         statusCode: 200,
-        data
+        data,
+        total,
+        page,
+        totalPages
       }
 
     } catch (error) {
@@ -396,7 +405,8 @@ export class QuizAttemptService {
             question.score,
             answer.text_answer,
             quiz.subject.title,
-            quiz.subject.bot.ai_model,
+
+            quiz?.subject?.bot?.ai_model || "gpt-3.5-turbo",
           );
 
           totalScore += obtainedMarks;

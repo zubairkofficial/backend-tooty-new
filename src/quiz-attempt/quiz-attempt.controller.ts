@@ -30,8 +30,9 @@ export class QuizAttemptController {
   @Get('student-quiz-history')
   @Roles(Role.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async getQuizAttemptsByStudent(@Req() req: any) {
-    return this.quizAttemptService.getQuizAttemptsByStudent(req);
+  async getQuizAttemptsByStudent(@Req() req: any, @Query('page') page?: number,
+    @Query('limit') limit?: number) {
+    return this.quizAttemptService.getQuizAttemptsByStudent(req, page, limit);
   }
 
   @Post('create-submition')

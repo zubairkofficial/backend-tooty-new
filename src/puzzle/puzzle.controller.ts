@@ -45,14 +45,29 @@ export class PuzzleController {
         return this.puzzleService.getAllAssignedPuzzles(req)
     }
 
+     //get puzzles created by admin, bu level and subject
+     @Get('/get-student-puzzle-attempts')
+     @Roles(Role.USER)
+     @UseGuards(JwtAuthGuard, RolesGuard)
+     async getPuzzleAttemptsByStudent(
+         @Req() req: any,
+         @Query('page') page?: number,
+         @Query('limit') limit?: number) {
+         return this.puzzleService.getPuzzleAttemptsByStudent( req, page, limit);
+     }
+ 
+
     //get puzzles created by admin, bu level and subject
     @Get('/:subject_id/:student_id')
     @Roles(Role.TEACHER)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    async getQuizAttemptsByStudentSubject(@Param() params: any, @Req() req: any, @Query('page') page?: number,
+    async getPuzzleAttemptsByStudentSubject(@Param() params: any, @Req() req: any, @Query('page') page?: number,
         @Query('limit') limit?: number) {
         return this.puzzleService.getPuzzleAttemptsByStudentSubject(params, req, page, limit);
     }
+
+
+   
 
     @Get("/get-by-level-subject")
     @Roles(Role.TEACHER)

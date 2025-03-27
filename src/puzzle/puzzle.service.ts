@@ -780,5 +780,50 @@ export class PuzzleService {
         }
     }
 
+    async getPuzzleAttemptsByStudent( req: any, page: number = 1, limit: number = 10) {
+        
+        try {
+            const offset = (page - 1) * limit;
+
+            const { rows: data, count: total } = await PuzzleAttempt.findAndCountAll({
+                where: {
+                    student_id: {
+                        [Op.eq]: req.user.sub
+                    },
+                    marked: {
+                        [Op.eq]: true
+                    }
+                },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    {
+                        model: PuzzleAssignment,
+                        include: [{
+                            model: Puzzle,
+                        }],
+                    }
+                ],
+                limit,
+                offset
+            });
+
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                statusCode: 200,
+                data,
+                total,
+                page,
+                totalPages
+            };
+
+        } catch (error) {
+            throw new HttpException(
+                error.message || "Error fetching puzzle attempts by student.",
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
 
 }
